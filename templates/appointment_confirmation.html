@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Confirmation</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Appointment Confirmation</h2>
+        <div class="card mt-4">
+            <div class="card-body">
+                <p><strong>UHID:</strong> {{ uhid }}</p>
+                <p><strong>Name:</strong> {{ name }}</p>
+                <p><strong>Age:</strong> {{ age }}</p>
+                <p><strong>Gender:</strong> {{ gender }}</p>
+                <p><strong>Department:</strong> {{ department }}</p>
+                <p><strong>Doctor:</strong> {{ doctor }}</p>
+                <p><strong>Appointment Date:</strong> {{ appointment_date }}</p>
+                <p><strong>Valid Upto:</strong> {{ valid_upto }}</p>
+                <p><strong>Amount:</strong> ₹{{ amount }}</p>
+                <a href="{{ url_for('generate_pdf', aadhaar=uhid, name=name, age=age, gender=gender, department=department, doctor=doctor, appointment_date=appointment_date) }}" class="btn btn-primary">
+                    Download Receipt (PDF)
+                </a>
+                
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

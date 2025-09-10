@@ -1,0 +1,82 @@
+<!-- templates/make_appointment.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Make Appointment | CareConnect</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='make_appointment.css') }}">
+  <script>
+    // Dummy doctors by department
+    const doctorsByDept = {
+      "Cardiology": ["Dr. A Sharma", "Dr. P Kapoor"],
+      "Neurology": ["Dr. N Verma", "Dr. I Khan"],
+      "Orthopedics": ["Dr. O Das", "Dr. R Yadav"],
+      "Pediatrics": ["Dr. K Mehra", "Dr. B Shah"],
+      "Dermatology": ["Dr. D Patel", "Dr. S Nair"],
+      "General Medicine": ["Dr. G Reddy", "Dr. C Joshi"]
+    };
+
+    function updateDoctors() {
+      const deptSelect = document.getElementById("department");
+      const doctorSelect = document.getElementById("doctor");
+      const selectedDept = deptSelect.value;
+
+      // Clear current doctor options
+      doctorSelect.innerHTML = "";
+
+      // Populate new doctor list
+      if (doctorsByDept[selectedDept]) {
+        doctorsByDept[selectedDept].forEach(doc => {
+          const option = document.createElement("option");
+          option.value = doc;
+          option.textContent = doc;
+          doctorSelect.appendChild(option);
+        });
+      }
+    }
+  </script>
+</head>
+<body class="bg-light">
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card p-4 shadow-sm">
+          <h3 class="text-center mb-4">Make Appointment</h3>
+          <form method="POST" action="/receptionist/appointment">
+            <input type="hidden" name="aadhaar" value="{{ aadhaar }}">
+
+            <div class="mb-3">
+              <label class="form-label">Select Department</label>
+              <select class="form-select" name="department" id="department" onchange="updateDoctors()" required>
+                <option disabled selected>Select a department</option>
+                <option>Cardiology</option>
+                <option>Neurology</option>
+                <option>Orthopedics</option>
+                <option>Pediatrics</option>
+                <option>Dermatology</option>
+                <option>General Medicine</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Select Doctor</label>
+              <select class="form-select" name="doctor" id="doctor" required>
+                <option disabled selected>Select a doctor</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Preferred Date</label>
+              <input type="date" name="date" class="form-control" required min="{{ min_date }}">
+
+            </div>
+
+            <button type="submit" class="btn btn-success w-100">Book Appointment</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
