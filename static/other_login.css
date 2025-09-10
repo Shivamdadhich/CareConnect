@@ -1,0 +1,51 @@
+/* static/other_login.css */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #fdfbe8;
+}
+
+.card {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+h3 {
+    color: #ffc107;
+    font-weight: 600;
+}
+
+label {
+    font-weight: 500;
+    color: #333;
+}
+
+input[type="text"],
+input[type="password"] {
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 15px;
+}
+
+button {
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    background-color: #ffc107;
+    color: #212529;
+    border: none;
+}
+
+button:hover {
+    background-color: #e0a800;
+}
+
+a {
+    color: #ffc107;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
