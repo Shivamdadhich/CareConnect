@@ -4,57 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab Dashboard | CareConnect</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            padding: 0 0 18px 0;
-            background-color: #f8f9fa;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f6fffa 100%) !important;
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+        h1, h2, h3, h4, h5, h6, .navbar-brand {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+        .glass-nav {
+            background: rgba(6, 78, 59, 0.9) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .main-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 8px 30px rgba(4, 120, 87, 0.04);
+            margin-bottom: 20px;
         }
         .recent-panel {
             max-height: 80vh;
             overflow-y: auto;
         }
-        .patient-card {
-            background: #ffffff;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 18px;
-        }
         .section-title {
-            font-weight: 700;
-            margin-top: 15px;
-            color: #212529;
-            border-bottom: 2px solid #0d6efd;
-            padding-bottom: 5px;
-            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: #064e3b;
+            border-left: 4px solid #10b981;
+            padding-left: 12px;
+            margin-top: 10px;
+            margin-bottom: 16px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #064e3b;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+        .glass-input {
+            border: 1.5px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            color: #064e3b;
+            font-weight: 500;
+        }
+        .glass-input:focus {
+            background: #ffffff;
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+        }
+        .btn-action {
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
         }
         .pending-item {
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            transition: all 0.2s ease;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.08) !important;
         }
         .pending-item:hover {
-            background-color: #e9ecef;
+            background-color: rgba(16, 185, 129, 0.05) !important;
+            transform: translateY(-1px);
         }
         .upload-row {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
         }
     </style>
     {% include 'theme_style.html' %}
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark glass-nav mb-4 shadow-sm py-3">
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-                <span style="color: #10b981; margin-right: 6px; font-size: 1.25rem;">✚</span> CareConnect Lab Dashboard
+                <span style="color: #34d399; margin-right: 8px; font-size: 1.4rem;">✚</span> CareConnect Lab Portal
             </a>
             <div class="ms-auto d-flex align-items-center gap-3">
-                <span class="navbar-text text-light">Lab In-Charge: <strong>{{ session.get('lab_name') }}</strong></span>
-                <a href="{{ url_for('lab_logout') }}" class="btn btn-outline-danger btn-sm px-3">Logout</a>
+                <span class="navbar-text text-light">Lab In-Charge: <strong class="text-white">{{ session.get('lab_name') }}</strong></span>
+                <a href="{{ url_for('lab_logout') }}" class="btn btn-outline-danger btn-sm px-3 py-2 rounded-3 fw-semibold">Logout</a>
             </div>
         </div>
     </nav>
@@ -76,17 +125,17 @@
             <!-- LEFT: Patient search, demographics, upload area -->
             <div class="col-lg-8">
                 <!-- Search bar -->
-                <div class="patient-card mb-3 shadow-sm">
+                <div class="main-card shadow-sm">
                     <h5 class="mb-3">Search Patient</h5>
                     <form method="POST" action="{{ url_for('lab_dashboard') }}" class="d-flex gap-2">
-                        <input type="text" name="aadhaar" id="mainAadhaarInput" class="form-control" placeholder="Enter Aadhaar Number" required value="{{ aadhaar or '' }}">
-                        <button type="submit" class="btn btn-primary px-4">Search</button>
+                        <input type="text" name="aadhaar" id="mainAadhaarInput" class="form-control glass-input" placeholder="Enter Aadhaar Number" required value="{{ aadhaar or '' }}">
+                        <button type="submit" class="btn btn-action btn-primary px-4">Search</button>
                     </form>
                 </div>
 
                 {% if patient %}
                     <!-- Demographics -->
-                    <div class="patient-card mb-3 shadow-sm">
+                    <div class="main-card shadow-sm">
                         <h4 class="section-title text-primary">Patient Demographics</h4>
                         <div class="row">
                             <div class="col-md-3 col-sm-6 mb-2">
@@ -109,7 +158,7 @@
                     </div>
 
                      <!-- Upload report form per advised test -->
-                     <div class="patient-card mb-3 shadow-sm">
+                     <div class="main-card mb-3 shadow-sm">
                          <h4 class="section-title text-success">Upload Pending Reports (Upload Selected Together)</h4>
                          
                          <div id="lockWarningBannerContainer">
@@ -136,15 +185,15 @@
                                              <br><small class="text-muted">Advised by: <strong>{{ test.doctor_name or 'Unknown' }}</strong></small>
                                          </div>
                                          <div style="flex: 2; min-width: 150px;">
-                                             <input type="date" name="report_date_{{ loop.index0 }}" class="form-control form-control-sm" required value="{{ today_date }}" {% if is_locked_by_other %}disabled{% endif %}>
+                                             <input type="date" name="report_date_{{ loop.index0 }}" class="form-control form-control-sm glass-input" required value="{{ today_date }}" {% if is_locked_by_other %}disabled{% endif %}>
                                          </div>
                                          <div style="flex: 4; min-width: 250px;">
-                                             <input type="file" name="report_file_{{ loop.index0 }}" class="form-control form-control-sm" {% if is_locked_by_other %}disabled{% endif %}>
+                                             <input type="file" name="report_file_{{ loop.index0 }}" class="form-control form-control-sm glass-input" {% if is_locked_by_other %}disabled{% endif %}>
                                          </div>
                                      </div>
                                  {% endfor %}
                                  
-                                 <button type="submit" class="btn btn-success mt-2 px-4" {% if is_locked_by_other %}disabled{% endif %}>Upload Selected Reports</button>
+                                 <button type="submit" class="btn btn-action btn-success mt-2 px-4" {% if is_locked_by_other %}disabled{% endif %}>Upload Selected Reports ➔</button>
                              </form>
                          {% else %}
                              <div class="alert alert-warning py-2 mb-0">No active advised tests found for this patient. You can upload other/custom reports below.</div>
@@ -152,51 +201,53 @@
                     </div>
 
                      <!-- Custom uploads option -->
-                     <div class="patient-card mb-3 shadow-sm">
+                     <div class="main-card mb-3 shadow-sm">
                          <h4 class="section-title text-secondary">Upload Custom / Other Report</h4>
                          <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="upload-row d-flex align-items-center flex-wrap gap-2">
                              <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
                              <div style="flex: 2; min-width: 200px;">
-                                 <input type="text" name="custom_report_type" class="form-control form-control-sm" placeholder="Custom Test Type (e.g. ECG, MRI)" required {% if is_locked_by_other %}disabled{% endif %}>
+                                 <input type="text" name="custom_report_type" class="form-control form-control-sm glass-input" placeholder="Custom Test Type (e.g. ECG, MRI)" required {% if is_locked_by_other %}disabled{% endif %}>
                              </div>
                              <div style="flex: 2; min-width: 150px;">
-                                 <input type="date" name="report_date" class="form-control form-control-sm" required value="{{ today_date }}" {% if is_locked_by_other %}disabled{% endif %}>
+                                 <input type="date" name="report_date" class="form-control form-control-sm glass-input" required value="{{ today_date }}" {% if is_locked_by_other %}disabled{% endif %}>
                              </div>
                              <div style="flex: 3; min-width: 200px;">
-                                 <input type="file" name="report_file" class="form-control form-control-sm" required {% if is_locked_by_other %}disabled{% endif %}>
+                                 <input type="file" name="report_file" class="form-control form-control-sm glass-input" required {% if is_locked_by_other %}disabled{% endif %}>
                              </div>
                              <div style="flex: 1; min-width: 100px;" class="text-end">
-                                 <button type="submit" class="btn btn-sm btn-secondary w-100" {% if is_locked_by_other %}disabled{% endif %}>Upload Custom</button>
+                                 <button type="submit" class="btn btn-sm btn-secondary w-100 btn-action" {% if is_locked_by_other %}disabled{% endif %}>Upload Custom</button>
                              </div>
                          </form>
                      </div>
 
                     <!-- Uploaded reports history -->
-                    <div class="patient-card mb-3 shadow-sm">
+                    <div class="main-card mb-3 shadow-sm">
                         <h4 class="section-title">Uploaded Reports History</h4>
                         {% if reports %}
-                            <table class="table table-bordered mt-2">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Report Type</th>
-                                        <th>Uploaded By</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for r in reports %}
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mt-2">
+                                    <thead class="table-light">
                                         <tr>
-                                            <td>{{ r.report_date }}</td>
-                                            <td><strong>{{ r.report_type }}</strong></td>
-                                            <td>{{ r.uploaded_by or 'Unknown' }}</td>
-                                            <td>
-                                                <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-outline-primary">Download</a>
-                                            </td>
+                                            <th>Date</th>
+                                            <th>Report Type</th>
+                                            <th>Uploaded By</th>
+                                            <th class="text-end">Action</th>
                                         </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {% for r in reports %}
+                                            <tr>
+                                                <td>{{ r.report_date }}</td>
+                                                <td><strong>{{ r.report_type }}</strong></td>
+                                                <td><small>{{ r.uploaded_by or 'Unknown' }}</small></td>
+                                                <td class="text-end">
+                                                    <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-3">Download</a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         {% else %}
                             <p class="text-muted mt-2">No reports uploaded yet for this patient.</p>
                         {% endif %}
@@ -208,10 +259,9 @@
                 {% endif %}
             </div>
 
-            <!-- RIGHT: Pending Tests Sidebar (Oldest 20) -->
             <div class="col-lg-4">
-                <div class="card recent-panel shadow-sm p-3 bg-white border">
-                    <h5 class="border-bottom pb-2 fw-bold text-dark">Pending Tests (Oldest 20)</h5>
+                <div class="card main-card recent-panel shadow-sm">
+                    <h5 class="border-bottom pb-2 fw-bold text-dark mb-3">Pending Tests (Oldest 20)</h5>
                     <form id="selectPendingForm" method="POST" action="{{ url_for('lab_dashboard') }}">
                         <input type="hidden" name="aadhaar" id="selected_aadhaar_input">
                     </form>
