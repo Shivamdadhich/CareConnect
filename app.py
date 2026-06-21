@@ -137,7 +137,25 @@ def make_appointment():
 
     aadhaar = request.args.get("aadhaar")
     min_date = date.today().isoformat()
-    return render_template("make_appointment.html", aadhaar=aadhaar, min_date=min_date)
+
+    # Fetch active doctors from database
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("SELECT name, specialization FROM doctors")
+    doctors = cursor.fetchall()
+    cursor.close()
+
+    # Group doctors by department
+    doctors_by_dept = {}
+    for doc in doctors:
+        dept = doc["specialization"]
+        if dept not in doctors_by_dept:
+            doctors_by_dept[dept] = []
+        doctors_by_dept[dept].append(doc["name"])
+
+    return render_template("make_appointment.html", 
+                           aadhaar=aadhaar, 
+                           min_date=min_date, 
+                           doctors_by_dept=doctors_by_dept)
 
 # -------------------- Appointment PDF --------------------
 @app.route("/receptionist/appointment/pdf/<aadhaar>")
