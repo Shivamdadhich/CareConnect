@@ -270,15 +270,17 @@ def doctor_dashboard():
                 for r in cur.fetchall()
             ]
 
-    # Recent patients
+    # Fetch doctor's assigned patients (recent 20) from appointments
+    doctor_name = session.get("doctor_name")
     cur.execute("""
         SELECT p.name, p.aadhaar
-        FROM patient_history h
-        JOIN patients p ON h.aadhaar = p.aadhaar
+        FROM appointments a
+        JOIN patients p ON a.aadhaar = p.aadhaar
+        WHERE a.doctor = %s
         GROUP BY p.name, p.aadhaar
-        ORDER BY MAX(h.visit_date) DESC
-        LIMIT 5
-    """)
+        ORDER BY MAX(a.appointment_date) DESC
+        LIMIT 20
+    """, (doctor_name,))
     recent_patients = [{"name": rp[0], "aadhaar": rp[1]} for rp in cur.fetchall()]
 
     cur.close()
