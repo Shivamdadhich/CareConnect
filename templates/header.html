@@ -1,0 +1,43 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+            <span style="color: #0d6efd; margin-right: 6px; font-size: 1.25rem;">✚</span> CareConnect
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#careConnectNavbar" aria-controls="careConnectNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="careConnectNavbar">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/schedule">Doctor Schedule</a>
+                </li>
+            </ul>
+            <div class="d-flex align-items-center gap-3">
+                {% if session.get('doctor_logged_in') %}
+                    <span class="navbar-text text-light">Doctor: <strong>{{ session.get('doctor_name') }}</strong></span>
+                    <a href="{{ url_for('doctor_logout') }}" class="btn btn-outline-danger btn-sm px-3">Logout</a>
+                {% elif session.get('lab_logged_in') %}
+                    <span class="navbar-text text-light">Lab: <strong>{{ session.get('lab_name') }}</strong></span>
+                    <a href="{{ url_for('lab_logout') }}" class="btn btn-outline-danger btn-sm px-3">Logout</a>
+                {% elif session.get('receptionist_logged_in') %}
+                    <span class="navbar-text text-light">Receptionist: <strong>{{ session.get('receptionist_name') }}</strong></span>
+                    <a href="{{ url_for('receptionist_logout') }}" class="btn btn-outline-danger btn-sm px-3">Logout</a>
+                {% else %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="loginMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            Staff Login
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="loginMenuButton">
+                            <li><a class="dropdown-item" href="/doctor/login">Doctor Login</a></li>
+                            <li><a class="dropdown-item" href="/lab/login">Lab Login</a></li>
+                            <li><a class="dropdown-item" href="/receptionist/login">Receptionist Login</a></li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

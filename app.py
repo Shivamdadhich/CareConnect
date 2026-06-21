@@ -271,7 +271,7 @@ def doctor_dashboard():
             cur.execute("""
                 SELECT visit_date, diagnosis, prescription, advised_tests, doctor_name
                 FROM patient_history WHERE aadhaar = %s
-                ORDER BY visit_date DESC
+                ORDER BY visit_date DESC, history_id DESC
             """, (aadhaar,))
             history = [
                 {"visit_date": h[0], "diagnosis": h[1], "prescription": h[2], "advised_tests": h[3], "doctor_name": h[4]}
@@ -281,7 +281,7 @@ def doctor_dashboard():
             cur.execute("""
                 SELECT id, report_date, report_type, uploaded_by
                 FROM lab_reports WHERE aadhaar = %s
-                ORDER BY report_date DESC
+                ORDER BY report_date DESC, id DESC
             """, (aadhaar,))
             reports = [
                 {"id": r[0], "report_date": r[1], "report_type": r[2], "uploaded_by": r[3]}
@@ -475,7 +475,7 @@ def lab_dashboard():
             cur.execute("""
                 SELECT id, report_date, report_type, uploaded_by 
                 FROM lab_reports WHERE aadhaar = %s 
-                ORDER BY report_date DESC
+                ORDER BY report_date DESC, id DESC
             """, (aadhaar,))
             reports = cur.fetchall()
             
@@ -624,7 +624,7 @@ def view_patient_reports():
             cur.execute("""
                 SELECT id, report_date, report_type 
                 FROM lab_reports WHERE aadhaar = %s 
-                ORDER BY report_date DESC
+                ORDER BY report_date DESC, id DESC
             """, (aadhaar,))
             reports = cur.fetchall()
             
