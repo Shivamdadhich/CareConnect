@@ -272,10 +272,11 @@ def doctor_dashboard():
 
     # Recent patients
     cur.execute("""
-        SELECT DISTINCT p.name, p.aadhaar
+        SELECT p.name, p.aadhaar
         FROM patient_history h
         JOIN patients p ON h.aadhaar = p.aadhaar
-        ORDER BY h.visit_date DESC
+        GROUP BY p.name, p.aadhaar
+        ORDER BY MAX(h.visit_date) DESC
         LIMIT 5
     """)
     recent_patients = [{"name": rp[0], "aadhaar": rp[1]} for rp in cur.fetchall()]
