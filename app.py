@@ -12,6 +12,13 @@ app.secret_key = "supersecretkey"
 
 mysql = get_connection(app)
 
+from flask import g
+@app.teardown_appcontext
+def close_db(error):
+    db_conn = g.pop('db_conn', None)
+    if db_conn is not None and db_conn.open:
+        db_conn.close()
+
 # -------------------- Home --------------------
 @app.route("/")
 def home():
