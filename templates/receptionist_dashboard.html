@@ -9,7 +9,17 @@
   {% include 'theme_style.html' %}
 </head>
 <body class="bg-light">
-  {% include 'header.html' %}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+      <div class="container-fluid px-4">
+          <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+              <span style="color: #10b981; margin-right: 6px; font-size: 1.25rem;">✚</span> CareConnect Receptionist Dashboard
+          </a>
+          <div class="ms-auto d-flex align-items-center gap-3">
+              <span class="navbar-text text-light">Receptionist: <strong>{{ session.get('receptionist_name') }}</strong></span>
+              <a href="{{ url_for('receptionist_logout') }}" class="btn btn-outline-danger btn-sm px-3">Logout</a>
+          </div>
+      </div>
+  </nav>
   <div class="container mt-5">
     <div class="row justify-content-center">
       <div class="col-md-6">
