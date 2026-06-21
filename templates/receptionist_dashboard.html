@@ -3,42 +3,117 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Receptionist Dashboard | CareConnect</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='receptionist_dashboard.css') }}">
   {% include 'theme_style.html' %}
+  <style>
+      body {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f6fffa 100%) !important;
+          min-height: 100vh;
+      }
+      h3, .navbar-brand {
+          font-family: 'Outfit', sans-serif;
+      }
+      /* Modern Glassmorphic Navbar */
+      .glass-nav {
+          background: rgba(6, 78, 59, 0.9) !important;
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+          transition: all 0.3s ease;
+      }
+      .dashboard-card {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(16, 185, 129, 0.15);
+          border-radius: 24px;
+          padding: 40px;
+          box-shadow: 0 10px 30px -10px rgba(4, 120, 87, 0.08);
+          transition: all 0.3s ease;
+          margin-top: 40px;
+      }
+      .form-label {
+          font-weight: 600;
+          color: #064e3b;
+          font-size: 0.95rem;
+          margin-bottom: 8px;
+      }
+      .glass-input {
+          border: 1.5px solid rgba(16, 185, 129, 0.2);
+          border-radius: 12px;
+          padding: 14px 18px;
+          font-size: 1rem;
+          background: rgba(255, 255, 255, 0.8);
+          transition: all 0.3s ease;
+          color: #064e3b;
+          font-weight: 600;
+      }
+      .glass-input:focus {
+          background: #ffffff;
+          border-color: #10b981 !important;
+          box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+      }
+      .btn-action {
+          border-radius: 12px;
+          padding: 14px 28px;
+          font-weight: 600;
+          font-size: 1rem;
+          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+          transition: all 0.3s ease;
+      }
+      .btn-action:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+      }
+      .info-badge {
+          background: rgba(16, 185, 129, 0.1);
+          color: #047857;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          display: inline-block;
+          margin-bottom: 15px;
+          border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+  </style>
 </head>
-<body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark glass-nav mb-4 shadow-sm py-3">
       <div class="container-fluid px-4">
           <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-              <span style="color: #10b981; margin-right: 6px; font-size: 1.25rem;">✚</span> CareConnect Receptionist Dashboard
+              <span style="color: #34d399; margin-right: 8px; font-size: 1.4rem;">✚</span> CareConnect Receptionist
           </a>
           <div class="ms-auto d-flex align-items-center gap-3">
-              <span class="navbar-text text-light">Receptionist: <strong>{{ session.get('receptionist_name') }}</strong></span>
-              <a href="{{ url_for('receptionist_logout') }}" class="btn btn-outline-danger btn-sm px-3">Logout</a>
+              <span class="navbar-text text-light">Receptionist: <strong class="text-white">{{ session.get('receptionist_name') }}</strong></span>
+              <a href="{{ url_for('receptionist_logout') }}" class="btn btn-outline-danger btn-sm px-3 py-2 rounded-3 fw-semibold">Logout</a>
           </div>
       </div>
   </nav>
-  <div class="container mt-5">
+
+  <div class="container">
     <div class="row justify-content-center">
-      <div class="col-md-6">
-        <div class="card p-4 shadow-sm">
-          <h3 class="text-center mb-4">Search Patient by Aadhaar</h3>
+      <div class="col-md-6 col-lg-5">
+        <div class="dashboard-card shadow-sm">
+          <div class="text-center">
+             <span class="info-badge">✦ Patient Registration Portal</span>
+          </div>
+          <h3 class="text-center mb-4 fw-bold text-dark">Find or Register Patient</h3>
           <form method="POST" action="/receptionist/search">
-            <div class="mb-3">
-              <label for="aadhaar" class="form-label">Aadhaar Number</label>
-              <input type="text" name="aadhaar" class="form-control" required>
+            <div class="mb-4">
+              <label for="aadhaar" class="form-label">Aadhaar Card Number (12 Digits)</label>
+              <input type="text" name="aadhaar" class="form-control glass-input" required placeholder="Enter Aadhaar Number" maxlength="12" pattern="\d{12}">
             </div>
-            <button type="submit" class="btn btn-primary w-100">Search</button>
-            <div class="text-center mt-3">
-              <a href="/admin/login">&larr; Logout</a>
-            </div>
+            <button type="submit" class="btn btn-action btn-primary w-100">Verify & Continue ➔</button>
           </form>
         </div>
       </div>
     </div>
   </div>
+  
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
