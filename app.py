@@ -9,6 +9,11 @@ import MySQLdb.cursors
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 mysql = get_connection(app)
 
@@ -689,6 +694,105 @@ def api_lab_upload_report():
     cur.close()
 
     return {"success": True, "message": f"Successfully uploaded {report_type}!"}
+
+@app.route("/api/lab/pending_tests")
+def api_lab_pending_tests():
+    if not session.get("lab_logged_in"):
+        return {"error": "Unauthorized"}, 401
+
+    active_aadhaar = request.args.get("active_aadhaar")
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # 1. Fetch all uploaded reports to filter pending lists
+    cur.execute("SELECT id, aadhaar, report_type, report_date, history_id FROM lab_reports")
+    all_uploaded = cur.fetchall()
+    
+    uploaded_by_aadhaar = {}
+    for r in all_uploaded:
+        p_aadhaar = r["aadhaar"]
+        if p_aadhaar not in uploaded_by_aadhaar:
+            uploaded_by_aadhaar[p_aadhaar] = []
+        uploaded_by_aadhaar[p_aadhaar].append(r)
+
+    # 2. Check lock of the active patient
+    is_locked_by_other = False
+    locked_by_name = None
+    if active_aadhaar:
+        cur.execute("""
+            SELECT locked_by, locked_at FROM patient_history 
+            WHERE aadhaar = %s ORDER BY visit_date DESC
+        """, (active_aadhaar,))
+        active_history = cur.fetchall()
+        
+        current_time = datetime.now()
+        for h in active_history:
+            l_by = h["locked_by"]
+            l_at = h["locked_at"]
+            if l_by and l_by != session.get("lab_name"):
+                if l_at and (current_time - l_at) < timedelta(minutes=10):
+                    is_locked_by_other = True
+                    locked_by_name = l_by
+                    break
+
+    # 3. Fetch all pending tests for sidebar (candidates)
+    cur.execute("""
+        SELECT h.history_id, p.name, p.aadhaar, h.visit_date, h.advised_tests, h.doctor_name, h.locked_by, h.locked_at
+        FROM patient_history h
+        JOIN patients p ON h.aadhaar = p.aadhaar
+        WHERE h.advised_tests IS NOT NULL AND h.advised_tests != ''
+        ORDER BY h.visit_date ASC
+    """)
+    all_pending_candidates = cur.fetchall()
+    cur.close()
+
+    pending_tests = []
+    current_time = datetime.now()
+    for h in all_pending_candidates:
+        p_aadhaar = h["aadhaar"]
+        h_id = h["history_id"]
+        h_date = h["visit_date"]
+        l_by = h["locked_by"]
+        l_at = h["locked_at"]
+        uploaded = uploaded_by_aadhaar.get(p_aadhaar, [])
+        
+        # Check active lock
+        is_active_lock = False
+        if l_by and l_at and (current_time - l_at) < timedelta(minutes=10):
+            is_active_lock = True
+        
+        advised_parts = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
+        unuploaded_parts = []
+        for test_name in advised_parts:
+            is_uploaded = False
+            for r in uploaded:
+                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower():
+                    is_uploaded = True
+                    break
+                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
+                    is_uploaded = True
+                    break
+            if not is_uploaded:
+                unuploaded_parts.append(test_name)
+        
+        if unuploaded_parts:
+            pending_tests.append({
+                "history_id": h_id,
+                "name": h["name"],
+                "aadhaar": p_aadhaar,
+                "visit_date": h_date.strftime("%Y-%m-%d"),
+                "advised_tests": ", ".join(unuploaded_parts),
+                "doctor_name": h["doctor_name"],
+                "is_locked": is_active_lock,
+                "locked_by": l_by
+            })
+            if len(pending_tests) >= 20:
+                break
+
+    return {
+        "pending_tests": pending_tests,
+        "is_locked_by_other": is_locked_by_other,
+        "locked_by_name": locked_by_name
+    }
 
 @app.route("/lab/logout")
 def lab_logout():
