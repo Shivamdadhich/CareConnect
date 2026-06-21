@@ -2,56 +2,278 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CareConnect | Home</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareConnect | Smart Healthcare System</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     {% include 'theme_style.html' %}
-</head>
-<body class="bg-light">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f6fffa 100%) !important;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow-x: hidden;
+        }
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
-        <div class="container-fluid px-4">
+        h1, h2, h3, h4, h5, .navbar-brand {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Modern Glassmorphic Navbar */
+        .glass-nav {
+            background: rgba(6, 78, 59, 0.9) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        /* Hero Banner Section */
+        .hero-section {
+            padding: 80px 0 50px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #064e3b;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .hero-title span {
+            background: linear-gradient(90deg, #10b981, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: #4b5563;
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+            line-height: 1.6;
+        }
+
+        /* Premium Floating Cards */
+        .feature-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 24px;
+            padding: 40px 32px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -10px rgba(4, 120, 87, 0.05);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px -15px rgba(4, 120, 87, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .icon-box {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(52, 211, 153, 0.05) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #10b981;
+            margin-bottom: 28px;
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover .icon-box {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            transform: scale(1.05) rotate(3deg);
+        }
+
+        .card-heading {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #064e3b;
+            margin-bottom: 12px;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        /* Access input enhancements */
+        .glass-input {
+            border: 1.5px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            color: #064e3b;
+            font-weight: 600;
+        }
+
+        .glass-input:focus {
+            background: #ffffff;
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+        }
+
+        /* Dynamic buttons */
+        .btn-action {
+            border-radius: 12px;
+            padding: 12px 28px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .footer {
+            padding: 24px 0;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #6b7280;
+            border-top: 1px solid rgba(16, 185, 129, 0.1);
+            background: rgba(255, 255, 255, 0.4);
+            margin-top: 60px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title { font-size: 2.5rem; }
+            .hero-section { padding: 50px 0 30px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark glass-nav mb-4 shadow-sm py-3">
+        <div class="container px-4">
             <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-                <span style="color: #10b981; margin-right: 6px; font-size: 1.25rem;">✚</span> CareConnect
+                <span style="color: #34d399; margin-right: 8px; font-size: 1.4rem;">✚</span> CareConnect
             </a>
             <div class="ms-auto">
-                <a href="/admin/login" class="btn btn-outline-light btn-sm px-3">Admin Login</a>
+                <a href="/admin/login" class="btn btn-outline-light btn-sm px-3 py-2 rounded-3 fw-semibold">Staff Login / Admin</a>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-5">
-        <h2 class="text-center mb-4">Welcome to CareConnect</h2>
-        
-        <div class="row">
+    <div class="container my-auto">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-badge">
+                <span>✦</span> Healthcare Redefined & Simplified
+            </div>
+            <h1 class="hero-title">Your Health, Secured in <span>Real-Time</span></h1>
+            <p class="hero-subtitle">Access doctor schedules, real-time lab reports, and manage appointment details instantly with CareConnect's modern hospital dashboard ecosystem.</p>
+        </div>
+
+        <div class="row g-4 justify-content-center">
             <!-- Doctor Schedule Section -->
-            <div class="col-md-6">
-                <div class="card shadow-sm custom-card">
-                    <div class="card-body">
-                        <h5 class="card-title">Doctor Schedule</h5>
-                        <p class="card-text">Check the availability of doctors by department.</p>
-                        <a href="/schedule" class="btn btn-primary">View Schedule</a>
+            <div class="col-md-5">
+                <div class="feature-card">
+                    <div class="icon-box">
+                        📅
                     </div>
+                    <h3 class="card-heading">Doctor Schedule</h3>
+                    <p class="card-desc">Check active doctor availability across 15+ specialized departments including Cardiology, Orthopedics, and General Medicine in real-time.</p>
+                    <a href="/schedule" class="btn btn-action btn-primary">
+                        View Live Schedule <span>➔</span>
+                    </a>
                 </div>
             </div>
 
             <!-- Lab Report Access Section -->
-            <div class="col-md-6">
-                <div class="card shadow-sm custom-card">
-                    <div class="card-body">
-                        <h5 class="card-title">Access Lab Report</h5>
-                        <form method="POST" action="/labreport">
-                            <div class="mb-3">
-                                <label for="aadhar" class="form-label">Enter Aadhar Number</label>
-                                <input type="text" class="form-control" name="aadhar" required>
-                            </div>
-                            <button type="submit" class="btn btn-success">View Report</button>
-                        </form>
+            <div class="col-md-5">
+                <div class="feature-card">
+                    <div class="icon-box">
+                        🔬
                     </div>
+                    <h3 class="card-heading">Patient Lab Portal</h3>
+                    <p class="card-desc">Instantly view or download your clinical lab reports using your 12-digit Aadhaar identification card safely and securely.</p>
+                    <form method="POST" action="/labreport">
+                        <div class="mb-4">
+                            <input type="text" class="form-control glass-input" id="aadhar" name="aadhar" placeholder="Enter Aadhaar Number (12 digits)" required maxlength="12" pattern="\d{12}">
+                        </div>
+                        <button type="submit" class="btn btn-action btn-success w-100 justify-content-center">
+                            Access Reports <span>➔</span>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <footer class="footer">
+        <div class="container">
+            © 2026 CareConnect Smart Healthcare Ecosystem. Built with security and precision.
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
