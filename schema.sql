@@ -66,13 +66,21 @@ CREATE TABLE IF NOT EXISTS lab_reports (
 );
 
 -- Seed Initial Test Data
-INSERT INTO receptionists (username, password, name) 
-VALUES ('receptionist1', 'pass123', 'Alice Smith')
-ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO receptionists (username, password, name) VALUES
+('receptionist1', 'pass123', 'Alice Smith'),
+('priya.sharma', 'pass123', 'Priya Sharma'),
+('anjali.gupta', 'pass123', 'Anjali Gupta'),
+('rohan.verma', 'pass123', 'Rohan Verma')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
 
-INSERT INTO lab_staff (username, password, name) 
-VALUES ('lab1', 'pass123', 'Jane Green')
-ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO lab_staff (username, password, name) VALUES
+('lab1', 'pass123', 'Jane Green'),
+('amit.patel', 'pass123', 'Amit Patel'),
+('sandeep.reddy', 'pass123', 'Sandeep Reddy'),
+('vikas.mishra', 'pass123', 'Vikas Mishra'),
+('neha.joshi', 'pass123', 'Neha Joshi'),
+('sunita.rao', 'pass123', 'Sunita Rao')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
 
 -- Seed unique doctors across standard departments (2 doctors per department)
 INSERT INTO doctors (username, password, name, specialization) VALUES
