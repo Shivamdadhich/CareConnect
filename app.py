@@ -415,9 +415,9 @@ def lab_dashboard():
     if not aadhaar:
         aadhaar = request.args.get("aadhaar")
 
-    # Fetch all uploaded reports to filter pending lists
+    # Fetch all uploaded reports to filter pending lists (with date)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT aadhaar, report_type FROM lab_reports")
+    cur.execute("SELECT aadhaar, report_type, report_date FROM lab_reports")
     all_uploaded = cur.fetchall()
     
     # Organize uploaded tests by patient
@@ -425,8 +425,8 @@ def lab_dashboard():
     for r in all_uploaded:
         p_aadhaar = r["aadhaar"]
         if p_aadhaar not in uploaded_by_aadhaar:
-            uploaded_by_aadhaar[p_aadhaar] = set()
-        uploaded_by_aadhaar[p_aadhaar].add(r["report_type"].lower().strip())
+            uploaded_by_aadhaar[p_aadhaar] = []
+        uploaded_by_aadhaar[p_aadhaar].append(r)
 
     if aadhaar:
         cur.execute("SELECT name, aadhaar, age, gender FROM patients WHERE aadhaar = %s", (aadhaar,))
@@ -441,18 +441,26 @@ def lab_dashboard():
             """, (aadhaar,))
             history = cur.fetchall()
 
-            # Extract individual tests that are NOT uploaded yet
+            # Extract individual tests that are NOT uploaded yet (on or after visit_date)
             advised_tests_list = []
             seen_tests = set()
-            patient_uploaded = uploaded_by_aadhaar.get(aadhaar, set())
+            patient_uploaded = uploaded_by_aadhaar.get(aadhaar, [])
             for h in history:
+                h_date = h["visit_date"]
                 if h["advised_tests"]:
                     parts = h["advised_tests"].split(",")
                     for part in parts:
                         test_name = part.strip()
                         if test_name and test_name.lower() not in seen_tests:
                             seen_tests.add(test_name.lower())
-                            if test_name.lower() not in patient_uploaded:
+                            
+                            is_uploaded = False
+                            for r in patient_uploaded:
+                                if r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
+                                    is_uploaded = True
+                                    break
+                            
+                            if not is_uploaded:
                                 advised_tests_list.append(test_name)
 
             # Get previously uploaded reports
@@ -477,14 +485,23 @@ def lab_dashboard():
     all_pending_candidates = cur.fetchall()
     cur.close()
 
-    # Filter out already uploaded ones
+    # Filter out already uploaded ones (on or after visit_date)
     pending_tests = []
     for h in all_pending_candidates:
         p_aadhaar = h["aadhaar"]
-        uploaded = uploaded_by_aadhaar.get(p_aadhaar, set())
+        h_date = h["visit_date"]
+        uploaded = uploaded_by_aadhaar.get(p_aadhaar, [])
         
         advised_parts = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
-        unuploaded_parts = [t for t in advised_parts if t.lower().strip() not in uploaded]
+        unuploaded_parts = []
+        for test_name in advised_parts:
+            is_uploaded = False
+            for r in uploaded:
+                if r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
+                    is_uploaded = True
+                    break
+            if not is_uploaded:
+                unuploaded_parts.append(test_name)
         
         if unuploaded_parts:
             h["advised_tests"] = ", ".join(unuploaded_parts)
