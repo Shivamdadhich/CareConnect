@@ -100,7 +100,7 @@
                                       <td>{{ r.report_type }}</td>
                                       <td>{{ r.uploaded_by or 'Unknown' }}</td>
                                       <td>
-                                          <a href="{{ url_for('view_report', report_id=r.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary me-1">View</a>
+                                          <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="viewReportModal('{{ url_for('view_report', report_id=r.id) }}', '{{ r.report_type }}')">View</button>
                                           <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-primary">Download</a>
                                       </td>
                                   </tr>
@@ -249,6 +249,40 @@ function renderSelectedTests() {
         selectedContainer.appendChild(badge);
     });
     testsHiddenInput.value = list.join(', ');
+}
+</script>
+
+<!-- Report Viewer Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalLabel">Report: <span id="modalReportTitle"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" style="height: 80vh;">
+                <iframe id="reportFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let reportModal;
+document.addEventListener("DOMContentLoaded", function() {
+    reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+    
+    // Clear iframe src when modal is closed to stop rendering
+    document.getElementById('reportModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('reportFrame').src = '';
+    });
+});
+
+function viewReportModal(url, reportType) {
+    document.getElementById('modalReportTitle').innerText = reportType;
+    document.getElementById('reportFrame').src = url;
+    reportModal.show();
 }
 </script>
 </body>
