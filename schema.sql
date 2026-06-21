@@ -115,5 +115,9 @@ INSERT INTO doctors (username, password, name, specialization) VALUES
 ('suresh.raina', 'pass123', 'Dr. Suresh Raina', 'General Surgery'),
 ('monika.sharma', 'pass123', 'Dr. Monika Sharma', 'General Surgery'),
 ('harish.rawat', 'pass123', 'Dr. Harish Rawat', 'Dentistry'),
-('tanvi.azmi', 'pass123', 'Dr. Tanvi Azmi', 'Dentistry')
+('tanvi.azmi', 'pass123', 'Dr. Tanvi Azmi', 'Dentistry'),
+('sandeep.sharma', 'pass123', 'Dr. Sandeep Sharma', 'Physician'),
+('neha.deshmukh', 'pass123', 'Dr. Neha Deshmukh', 'Physician'),
+('aravind.swamy', 'pass123', 'Dr. Aravind Swamy', 'Physician'),
+('kavya.nair', 'pass123', 'Dr. Kavya Nair', 'Physician')
 ON DUPLICATE KEY UPDATE name=VALUES(name), specialization=VALUES(specialization);
