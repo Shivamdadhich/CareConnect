@@ -96,6 +96,7 @@
                                       <td>{{ r.report_date }}</td>
                                       <td>{{ r.report_type }}</td>
                                       <td>
+                                          <a href="{{ url_for('view_report', report_id=r.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary me-1">View</a>
                                           <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-primary">Download</a>
                                       </td>
                                   </tr>

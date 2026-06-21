@@ -328,6 +328,30 @@ def download_report(report_id):
 
     return "Report not found", 404
 
+# -------------------- View Lab Report Inline --------------------
+@app.route("/doctor/view_report/<int:report_id>")
+def view_report(report_id):
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT file_name, file_data FROM lab_reports WHERE id = %s", (report_id,))
+    report = cur.fetchone()
+    cur.close()
+
+    if report:
+        file_name = report[0].lower()
+        mimetype = "application/pdf"
+        if file_name.endswith(".png"):
+            mimetype = "image/png"
+        elif file_name.endswith(".jpg") or file_name.endswith(".jpeg"):
+            mimetype = "image/jpeg"
+        elif file_name.endswith(".txt"):
+            mimetype = "text/plain"
+            
+        return send_file(BytesIO(report[1]),
+                         mimetype=mimetype,
+                         as_attachment=False)
+
+    return "Report not found", 404
+
 # -------------------- Doctor Logout --------------------
 @app.route("/doctor/logout")
 def doctor_logout():
