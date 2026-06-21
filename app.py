@@ -397,8 +397,20 @@ def lab_dashboard():
     if not aadhaar:
         aadhaar = request.args.get("aadhaar")
 
+    # Fetch all uploaded reports to filter pending lists
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT aadhaar, report_type FROM lab_reports")
+    all_uploaded = cur.fetchall()
+    
+    # Organize uploaded tests by patient
+    uploaded_by_aadhaar = {}
+    for r in all_uploaded:
+        p_aadhaar = r["aadhaar"]
+        if p_aadhaar not in uploaded_by_aadhaar:
+            uploaded_by_aadhaar[p_aadhaar] = set()
+        uploaded_by_aadhaar[p_aadhaar].add(r["report_type"].lower().strip())
+
     if aadhaar:
-        cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cur.execute("SELECT name, aadhaar, age, gender FROM patients WHERE aadhaar = %s", (aadhaar,))
         patient = cur.fetchone()
         
@@ -411,9 +423,10 @@ def lab_dashboard():
             """, (aadhaar,))
             history = cur.fetchall()
 
-            # Extract individual tests
+            # Extract individual tests that are NOT uploaded yet
             advised_tests_list = []
             seen_tests = set()
+            patient_uploaded = uploaded_by_aadhaar.get(aadhaar, set())
             for h in history:
                 if h["advised_tests"]:
                     parts = h["advised_tests"].split(",")
@@ -421,7 +434,8 @@ def lab_dashboard():
                         test_name = part.strip()
                         if test_name and test_name.lower() not in seen_tests:
                             seen_tests.add(test_name.lower())
-                            advised_tests_list.append(test_name)
+                            if test_name.lower() not in patient_uploaded:
+                                advised_tests_list.append(test_name)
 
             # Get previously uploaded reports
             cur.execute("""
@@ -433,7 +447,7 @@ def lab_dashboard():
             
         cur.close()
 
-    # Fetch oldest 20 pending tests
+    # Fetch pending tests for sidebar (candidates)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("""
         SELECT p.name, p.aadhaar, h.visit_date, h.advised_tests
@@ -441,10 +455,24 @@ def lab_dashboard():
         JOIN patients p ON h.aadhaar = p.aadhaar
         WHERE h.advised_tests IS NOT NULL AND h.advised_tests != ''
         ORDER BY h.visit_date ASC
-        LIMIT 20
     """)
-    pending_tests = cur.fetchall()
+    all_pending_candidates = cur.fetchall()
     cur.close()
+
+    # Filter out already uploaded ones
+    pending_tests = []
+    for h in all_pending_candidates:
+        p_aadhaar = h["aadhaar"]
+        uploaded = uploaded_by_aadhaar.get(p_aadhaar, set())
+        
+        advised_parts = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
+        unuploaded_parts = [t for t in advised_parts if t.lower().strip() not in uploaded]
+        
+        if unuploaded_parts:
+            h["advised_tests"] = ", ".join(unuploaded_parts)
+            pending_tests.append(h)
+            if len(pending_tests) >= 20:
+                break
 
     today_date = date.today().strftime("%Y-%m-%d")
     return render_template("lab_dashboard.html",
