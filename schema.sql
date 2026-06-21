@@ -84,22 +84,36 @@ INSERT INTO lab_staff (username, password, name) VALUES
 ('sunita.rao', 'pass123', 'Sunita Rao')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
--- Seed unique doctors across standard departments (2 doctors per department)
+-- Seed unique doctors across standard departments (2 doctors per department, Indian names only)
 INSERT INTO doctors (username, password, name, specialization) VALUES
-('doctor1', 'pass123', 'Dr. John Doe', 'Cardiology'),
-('rajesh.khanna', 'pass123', 'Dr. Rajesh Khanna', 'Cardiology'),
 ('amit.sharma', 'pass123', 'Dr. Amit Sharma', 'General Medicine'),
 ('priya.patel', 'pass123', 'Dr. Priya Patel', 'General Medicine'),
-('sneha.reddy', 'pass123', 'Dr. Sneha Reddy', 'Pediatrics'),
-('vikram.malhotra', 'pass123', 'Dr. Vikram Malhotra', 'Pediatrics'),
-('anil.kapoor', 'pass123', 'Dr. Anil Kapoor', 'Orthopedics'),
-('sunita.williams', 'pass123', 'Dr. Sunita Williams', 'Orthopedics'),
-('kabir.sen', 'pass123', 'Dr. Kabir Sen', 'Dermatology'),
-('neha.gupta', 'pass123', 'Dr. Neha Gupta', 'Dermatology'),
+('rajesh.khanna', 'pass123', 'Dr. Rajesh Khanna', 'Cardiology'),
+('deepak.mehta', 'pass123', 'Dr. Deepak Mehta', 'Cardiology'),
 ('sanjay.dutt', 'pass123', 'Dr. Sanjay Dutt', 'Neurology'),
 ('aruna.roy', 'pass123', 'Dr. Aruna Roy', 'Neurology'),
+('anil.kapoor', 'pass123', 'Dr. Anil Kapoor', 'Orthopedics'),
+('sunita.rao', 'pass123', 'Dr. Sunita Rao', 'Orthopedics'),
+('kabir.sen', 'pass123', 'Dr. Kabir Sen', 'Dermatology'),
+('neha.gupta', 'pass123', 'Dr. Neha Gupta', 'Dermatology'),
+('sneha.reddy', 'pass123', 'Dr. Sneha Reddy', 'Pediatrics'),
+('vikram.malhotra', 'pass123', 'Dr. Vikram Malhotra', 'Pediatrics'),
+('meera.nair', 'pass123', 'Dr. Meera Nair', 'Gynecology & Obstetrics'),
+('rohan.joshi', 'pass123', 'Dr. Rohan Joshi', 'Gynecology & Obstetrics'),
+('alok.pathak', 'pass123', 'Dr. Alok Pathak', 'ENT'),
+('divya.singh', 'pass123', 'Dr. Divya Singh', 'ENT'),
 ('vijay.mallya', 'pass123', 'Dr. Vijay Mallya', 'Ophthalmology'),
 ('kiran.shaw', 'pass123', 'Dr. Kiran Shaw', 'Ophthalmology'),
-('meera.nair', 'pass123', 'Dr. Meera Nair', 'Gynecology'),
-('rohan.joshi', 'pass123', 'Dr. Rohan Joshi', 'Gynecology')
+('anupam.kher', 'pass123', 'Dr. Anupam Kher', 'Psychiatry'),
+('shalini.srivastava', 'pass123', 'Dr. Shalini Srivastava', 'Psychiatry'),
+('rahul.bajaj', 'pass123', 'Dr. Rahul Bajaj', 'Pulmonology'),
+('pooja.hegde', 'pass123', 'Dr. Pooja Hegde', 'Pulmonology'),
+('aditya.roy', 'pass123', 'Dr. Aditya Roy', 'Gastroenterology'),
+('richa.chaddha', 'pass123', 'Dr. Richa Chaddha', 'Gastroenterology'),
+('manish.pandey', 'pass123', 'Dr. Manish Pandey', 'Urology'),
+('kavita.krishnamurthy', 'pass123', 'Dr. Kavita Krishnamurthy', 'Urology'),
+('suresh.raina', 'pass123', 'Dr. Suresh Raina', 'General Surgery'),
+('monika.sharma', 'pass123', 'Dr. Monika Sharma', 'General Surgery'),
+('harish.rawat', 'pass123', 'Dr. Harish Rawat', 'Dentistry'),
+('tanvi.azmi', 'pass123', 'Dr. Tanvi Azmi', 'Dentistry')
 ON DUPLICATE KEY UPDATE name=VALUES(name), specialization=VALUES(specialization);
