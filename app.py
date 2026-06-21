@@ -34,6 +34,7 @@ def receptionist_login():
         cur.close()
 
         if receptionist:
+            session.clear()
             session["receptionist_logged_in"] = True
             session["receptionist_id"] = receptionist["receptionist_id"]
             session["receptionist_name"] = receptionist["name"]
@@ -221,6 +222,7 @@ def doctor_login():
         print("Doctor fetched:", doctor)  # Debugging
 
         if doctor:
+            session.clear()
             session["doctor_logged_in"] = True
             session["doctor_id"] = doctor[0]   # doctor_id
             session["doctor_name"] = doctor[3] # name
@@ -390,6 +392,7 @@ def lab_login():
         cur.close()
 
         if lab_staff:
+            session.clear()
             session["lab_logged_in"] = True
             session["lab_id"] = lab_staff["lab_staff_id"]
             session["lab_name"] = lab_staff["name"]
