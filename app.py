@@ -607,6 +607,35 @@ def lab_upload_report():
 
     return redirect(url_for("lab_dashboard", aadhaar=aadhaar))
 
+@app.route("/api/lab/upload_report", methods=["POST"])
+def api_lab_upload_report():
+    if not session.get("lab_logged_in"):
+        return {"error": "Unauthorized"}, 401
+
+    aadhaar = request.form.get("aadhaar")
+    report_type = request.form.get("report_type")
+    report_date = request.form.get("report_date")
+    history_id = request.form.get("history_id")
+    file = request.files.get("report_file")
+    uploaded_by = session.get("lab_name")
+
+    if not file or file.filename == '':
+        return {"error": "No file uploaded"}, 400
+
+    file_name = file.filename
+    file_data = file.read()
+    h_id = int(history_id) if history_id else None
+
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, h_id))
+    mysql.connection.commit()
+    cur.close()
+
+    return {"success": True, "message": f"Successfully uploaded {report_type}!"}
+
 @app.route("/lab/logout")
 def lab_logout():
     session.clear()
