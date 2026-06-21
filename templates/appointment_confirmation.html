@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Appointment Confirmation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-size: 14px; /* ✅ Font thoda chhota */
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-width: 900px;
+            margin: auto;
+        }
+        .row > .col-md-4 {
+            margin-bottom: 10px;
+        }
+
+        /* ✅ Print styles */
+        @media print {
+            body {
+                background: white;
+                font-size: 12px;
+            }
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+            }
+            .row > div {
+                width: 33.33% !important; /* ✅ force 3 columns per row */
+                float: left;
+                margin-bottom: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <div class="card p-4">
+        <h3 class="text-center mb-4">Appointment Confirmation</h3>
+        <div class="row">
+            <div><strong>Name:</strong> {{ name }}</div>
+            <div><strong>Age:</strong> {{ age }}</div>
+            <div><strong>Gender:</strong> {{ gender }}</div>
+        </div>
+        <div class="row">
+            <div><strong>Department:</strong> {{ department }}</div>
+            <div><strong>Doctor:</strong> {{ doctor }}</div>
+            <div><strong>Date:</strong> {{ appointment_date }}</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

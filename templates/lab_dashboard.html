@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Dashboard | CareConnect</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        .navbar {
+            background: rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--text-main) !important;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        h2, h3, h4, h5 {
+            font-weight: 600;
+        }
+
+        .btn-accent-blue {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-accent-blue:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+
+        .btn-accent-green {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-accent-green:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            color: white;
+        }
+
+        .form-control {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 8px;
+        }
+
+        .form-control:focus {
+            background: rgba(15, 23, 42, 0.8);
+            border-color: var(--accent-blue);
+            color: var(--text-main);
+            box-shadow: none;
+        }
+
+        .table {
+            color: var(--text-main);
+        }
+
+        .table th {
+            border-color: var(--border-color);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .table td {
+            border-color: var(--border-color);
+            vertical-align: middle;
+        }
+
+        .alert-info-custom {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .badge-pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">CareConnect <span style="color: var(--accent-blue);">Lab</span></a>
+            <div class="ms-auto d-flex align-items-center">
+                <span class="me-3 text-muted">Welcome, <strong>{{ session.get('lab_name') }}</strong></span>
+                <a href="{{ url_for('lab_logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Toast messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+            <!-- Search & Patient Details -->
+            <div class="col-lg-7">
+                <div class="glass-card mb-4">
+                    <h3 class="mb-3">Search Patient</h3>
+                    <form method="POST" action="{{ url_for('lab_dashboard') }}" class="d-flex gap-2">
+                        <input type="text" name="aadhaar" class="form-control" placeholder="Enter Patient Aadhaar Number" required value="{{ aadhaar or '' }}">
+                        <button type="submit" class="btn btn-accent-blue">Search</button>
+                    </form>
+                </div>
+
+                {% if patient %}
+                    <div class="glass-card mb-4">
+                        <h4 class="mb-3 text-info">Patient Demographics</h4>
+                        <div class="row">
+                            <div class="col-sm-6 mb-2">
+                                <span class="text-muted d-block">Name</span>
+                                <strong>{{ patient.name }}</strong>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <span class="text-muted d-block">Aadhaar</span>
+                                <strong>{{ patient.aadhaar }}</strong>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <span class="text-muted d-block">Age</span>
+                                <strong>{{ patient.age }} yrs</strong>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <span class="text-muted d-block">Gender</span>
+                                <strong>{{ patient.gender }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advised Tests from Doctor visits -->
+                    <div class="glass-card mb-4">
+                        <h4 class="mb-3 text-warning">Advised Tests (from History)</h4>
+                        {% if history %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Visit Date</th>
+                                            <th>Diagnosis</th>
+                                            <th>Advised Tests</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for h in history %}
+                                            <tr>
+                                                <td>{{ h.visit_date }}</td>
+                                                <td>{{ h.diagnosis }}</td>
+                                                <td>
+                                                    {% if h.advised_tests %}
+                                                        <span class="badge-pending">{{ h.advised_tests }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">None</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No visit history found.</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info-custom">
+                        Search for a patient using Aadhaar to start uploading reports or viewing active tests.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Upload Panel -->
+            <div class="col-lg-5">
+                {% if patient %}
+                    <div class="glass-card mb-4">
+                        <h3 class="mb-3">Upload Lab Report</h3>
+                        <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data">
+                            <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Report Date</label>
+                                <input type="date" name="report_date" class="form-control" required value="{{ today_date }}">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Report / Test Type</label>
+                                <input type="text" name="report_type" class="form-control" placeholder="e.g., Blood Test, X-Ray" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Upload Report File (PDF/Images)</label>
+                                <input type="file" name="report_file" class="form-control" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-accent-green w-100">Upload & Save Report</button>
+                        </form>
+                    </div>
+
+                    <!-- Previously Uploaded Reports -->
+                    <div class="glass-card">
+                        <h4 class="mb-3">Uploaded Reports History</h4>
+                        {% if reports %}
+                            <div class="list-group list-group-flush bg-transparent">
+                                {% for r in reports %}
+                                    <div class="list-group-item bg-transparent text-white border-secondary d-flex justify-content-between align-items-center px-0">
+                                        <div>
+                                            <h6 class="mb-0">{{ r.report_type }}</h6>
+                                            <small class="text-muted">Uploaded: {{ r.report_date }}</small>
+                                        </div>
+                                        <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-outline-info">Download</a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No reports uploaded yet.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

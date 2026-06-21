@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Doctor Dashboard | CareConnect</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 18px; }
+        .recent-panel { max-height: 70vh; overflow-y: auto; }
+        .patient-card { background: #f8f9fa; border-radius: 8px; padding: 18px; }
+        .section-title { font-weight: 700; margin-top: 20px; }
+    </style>
+</head>
+<body>
+  <div class="container-fluid">
+      <div class="row">
+          <!-- LEFT: Main area (search, details, add data, history, reports) -->
+          <div class="col-lg-8">
+              <!-- Search box -->
+              <form method="POST" class="d-flex mb-3">
+                  <input type="text" name="aadhaar" class="form-control me-2" placeholder="Enter Aadhaar Number" required>
+                  <button type="submit" class="btn btn-primary">Search</button>
+              </form>
+
+              {% if patient %}
+                  <div class="patient-card mb-3">
+                      <h3>{{ patient.name }}</h3>
+                      <p><strong>Aadhaar:</strong> {{ patient.aadhaar }}</p>
+                      <p><strong>Age:</strong> {{ patient.age }}</p>
+                      <p><strong>Gender:</strong> {{ patient.gender }}</p>
+                  </div>
+
+                  <!-- Add Today's Data -->
+                  <h4 class="section-title">Add Today's Data</h4>
+                  <form method="POST" action="{{ url_for('save_history') }}">
+                      <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                      <div class="mb-2">
+                          <label class="form-label">Reason of Visit</label>
+                          <textarea class="form-control" name="diagnosis" rows="2" required></textarea>
+                      </div>
+                      <div class="mb-2">
+                          <label class="form-label">Medicine Prescribed</label>
+                          <textarea class="form-control" name="prescription" rows="2"></textarea>
+                      </div>
+                      <div class="mb-2">
+                          <label class="form-label">Advised Tests</label>
+                          <textarea class="form-control" name="tests" rows="1"></textarea>
+                      </div>
+                      <button class="btn btn-success">Save</button>
+                  </form>
+
+                  <!-- Patient History -->
+                  <h4 class="section-title">Patient History</h4>
+                  {% if history %}
+                      <table class="table table-bordered">
+                          <thead>
+                              <tr>
+                                  <th>Date</th>
+                                  <th>Reason</th>
+                                  <th>Prescription</th>
+                                  <th>Advised Tests</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for h in history %}
+                                  <tr>
+                                      <td>{{ h.visit_date }}</td>
+                                      <td>{{ h.diagnosis }}</td>
+                                      <td>{{ h.prescription }}</td>
+                                      <td>{{ h.advised_tests }}</td>
+                                  </tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  {% else %}
+                      <p>No history found.</p>
+                  {% endif %}
+
+                  <!-- Lab Reports -->
+                  <h4 class="section-title">Lab Reports</h4>
+                  {% if reports %}
+                      <table class="table table-striped">
+                          <thead>
+                              <tr>
+                                  <th>Date</th>
+                                  <th>Type</th>
+                                  <th>Action</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for r in reports %}
+                                  <tr>
+                                      <td>{{ r.report_date }}</td>
+                                      <td>{{ r.report_type }}</td>
+                                      <td>
+                                          <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-primary">Download</a>
+                                      </td>
+                                  </tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  {% else %}
+                      <p>No lab reports available.</p>
+                  {% endif %}
+              {% else %}
+                  <p class="text-muted">Search a patient Aadhaar on the left to view details, add today's data, view history and lab reports.</p>
+              {% endif %}
+          </div>
+
+          <!-- RIGHT: Recent patients panel -->
+          <div class="col-lg-4">
+              <div class="card recent-panel p-3">
+                  <h5>Recent Patients</h5>
+                  <form id="selectRecentForm" method="POST" action="{{ url_for('doctor_dashboard') }}">
+                      <input type="hidden" name="selected_aadhaar" id="selected_aadhaar">
+                  </form>
+                  <ul class="list-group list-group-flush mt-2">
+                      {% for p in recent_patients %}
+                          <li class="list-group-item d-flex justify-content-between align-items-center">
+                              <div>
+                                  <strong>{{ p.name }}</strong><br>
+                                  <small>{{ p.aadhaar }}</small>
+                              </div>
+                              <div>
+                                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectRecent('{{ p.aadhaar }}')">Open</button>
+                              </div>
+                          </li>
+                      {% endfor %}
+                  </ul> 
+              </div>
+          </div>
+      </div>
+  </div>
+
+<script>
+function selectRecent(aadhaar) {
+    document.getElementById('selected_aadhaar').value = aadhaar;
+    document.getElementById('selectRecentForm').submit();
+}
+</script>
+</body>
+</html>
