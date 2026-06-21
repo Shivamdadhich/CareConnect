@@ -42,9 +42,12 @@
                           <label class="form-label">Medicine Prescribed</label>
                           <textarea class="form-control" name="prescription" rows="2"></textarea>
                       </div>
-                      <div class="mb-2">
+                      <div class="mb-2 position-relative">
                           <label class="form-label">Advised Tests</label>
-                          <textarea class="form-control" name="tests" rows="1"></textarea>
+                          <input type="text" id="testSearchInput" class="form-control" placeholder="Search tests (e.g. CBC, Lipid)..." autocomplete="off">
+                          <div id="suggestionsList" class="list-group position-absolute w-100 shadow" style="z-index: 1050; max-height: 200px; overflow-y: auto; display: none; background: white;"></div>
+                          <div id="selectedTestsContainer" class="mt-2 d-flex flex-wrap gap-2"></div>
+                          <input type="hidden" name="tests" id="testsHiddenInput">
                       </div>
                       <button class="btn btn-success">Save</button>
                   </form>
@@ -136,6 +139,111 @@
 function selectRecent(aadhaar) {
     document.getElementById('selected_aadhaar').value = aadhaar;
     document.getElementById('selectRecentForm').submit();
+}
+
+const availableTests = [
+    "Complete Blood Count (CBC)",
+    "Lipid Profile",
+    "Liver Function Test (LFT)",
+    "Kidney Function Test (KFT)",
+    "Thyroid Profile (T3, T4, TSH)",
+    "Blood Glucose (Fasting)",
+    "Blood Glucose (Post Prandial)",
+    "HbA1c (Glycated Haemoglobin)",
+    "Urine Routine & Microscopy",
+    "Chest X-Ray",
+    "Electrocardiogram (ECG)",
+    "Ultrasound Abdomen & Pelvis (USG)",
+    "Echocardiogram (Echo)",
+    "CT Scan Brain",
+    "MRI Spine",
+    "C-Reactive Protein (CRP)",
+    "Rheumatoid Factor (RF)",
+    "Serum Electrolytes",
+    "Widal Test (Typhoid)",
+    "Dengue NS1 Antigen",
+    "Vitamin D (25-Hydroxy)",
+    "Vitamin B12"
+];
+
+const selectedTests = new Set();
+
+const searchInput = document.getElementById('testSearchInput');
+const suggestionsList = document.getElementById('suggestionsList');
+const selectedContainer = document.getElementById('selectedTestsContainer');
+const testsHiddenInput = document.getElementById('testsHiddenInput');
+
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        suggestionsList.innerHTML = '';
+        if (!query) {
+            suggestionsList.style.display = 'none';
+            return;
+        }
+
+        const matches = availableTests.filter(test => test.toLowerCase().includes(query));
+        if (matches.length > 0) {
+            matches.forEach(match => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-dark';
+                item.innerHTML = `${match} <span class="badge bg-success rounded-pill">+</span>`;
+                item.onclick = function() {
+                    addTest(match);
+                };
+                suggestionsList.appendChild(item);
+            });
+            suggestionsList.style.display = 'block';
+        } else {
+            // Option to add custom test
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-primary';
+            item.innerHTML = `Add custom test: "${searchInput.value}" <span class="badge bg-primary rounded-pill">+</span>`;
+            item.onclick = function() {
+                addTest(searchInput.value.trim());
+            };
+            suggestionsList.appendChild(item);
+            suggestionsList.style.display = 'block';
+        }
+    });
+
+    // Close suggestions list on click outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+            suggestionsList.style.display = 'none';
+        }
+    });
+}
+
+function addTest(testName) {
+    if (!testName) return;
+    selectedTests.add(testName);
+    renderSelectedTests();
+    searchInput.value = '';
+    suggestionsList.style.display = 'none';
+}
+
+function removeTest(testName) {
+    selectedTests.delete(testName);
+    renderSelectedTests();
+}
+
+function renderSelectedTests() {
+    selectedContainer.innerHTML = '';
+    const list = Array.from(selectedTests);
+    list.forEach(test => {
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-primary text-white d-flex align-items-center gap-2 p-2';
+        badge.style.fontSize = '0.9rem';
+        badge.innerHTML = `${test} <button type="button" class="btn-close btn-close-white" style="font-size:0.6rem; padding: 0;" aria-label="Remove"></button>`;
+        badge.querySelector('button').onclick = function() {
+            removeTest(test);
+        };
+        selectedContainer.appendChild(badge);
+    });
+    testsHiddenInput.value = list.join(', ');
 }
 </script>
 </body>
