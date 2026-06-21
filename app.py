@@ -397,13 +397,27 @@ def lab_dashboard():
             
         cur.close()
 
+    # Fetch oldest 20 pending tests
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("""
+        SELECT p.name, p.aadhaar, h.visit_date, h.advised_tests
+        FROM patient_history h
+        JOIN patients p ON h.aadhaar = p.aadhaar
+        WHERE h.advised_tests IS NOT NULL AND h.advised_tests != ''
+        ORDER BY h.visit_date ASC
+        LIMIT 20
+    """)
+    pending_tests = cur.fetchall()
+    cur.close()
+
     today_date = date.today().strftime("%Y-%m-%d")
     return render_template("lab_dashboard.html",
                            patient=patient,
                            history=history,
                            reports=reports,
                            aadhaar=aadhaar,
-                           today_date=today_date)
+                           today_date=today_date,
+                           pending_tests=pending_tests)
 
 @app.route("/lab/upload_report", methods=["POST"])
 def lab_upload_report():
