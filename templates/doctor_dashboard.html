@@ -2,151 +2,253 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doctor Dashboard | CareConnect</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { padding: 0 0 18px 0; }
-        .recent-panel { max-height: 70vh; overflow-y: auto; }
-        .patient-card { background: #f8f9fa; border-radius: 8px; padding: 18px; }
-        .section-title { font-weight: 700; margin-top: 20px; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f6fffa 100%) !important;
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+        h1, h2, h3, h4, h5, h6, .navbar-brand {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+        .glass-nav {
+            background: rgba(6, 78, 59, 0.9) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .main-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 8px 30px rgba(4, 120, 87, 0.04);
+            margin-bottom: 24px;
+        }
+        .recent-panel {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .section-title {
+            font-size: 1.25rem;
+            color: #064e3b;
+            border-left: 4px solid #10b981;
+            padding-left: 12px;
+            margin-top: 24px;
+            margin-bottom: 16px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #064e3b;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+        .glass-input {
+            border: 1.5px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            color: #064e3b;
+            font-weight: 500;
+        }
+        .glass-input:focus {
+            background: #ffffff;
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+        }
+        .btn-action {
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        .patient-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
     </style>
     {% include 'theme_style.html' %}
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+  <nav class="navbar navbar-expand-lg navbar-dark glass-nav mb-4 shadow-sm py-3">
       <div class="container-fluid px-4">
           <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-              <span style="color: #10b981; margin-right: 6px; font-size: 1.25rem;">✚</span> CareConnect Doctor Dashboard
+              <span style="color: #34d399; margin-right: 8px; font-size: 1.4rem;">✚</span> CareConnect Doctor Portal
           </a>
           <div class="ms-auto d-flex align-items-center gap-3">
-              <span class="navbar-text text-light">Doctor: <strong>{{ session.get('doctor_name') }}</strong></span>
-              <a href="{{ url_for('doctor_logout') }}" class="btn btn-outline-danger btn-sm px-3">Logout</a>
+              <span class="navbar-text text-light">Doctor: <strong class="text-white">{{ session.get('doctor_name') }} ({{ session.get('specialization') }})</strong></span>
+              <a href="{{ url_for('doctor_logout') }}" class="btn btn-outline-danger btn-sm px-3 py-2 rounded-3 fw-semibold">Logout</a>
           </div>
       </div>
   </nav>
+
   <div class="container-fluid px-4">
       <div class="row">
-          <!-- LEFT: Main area (search, details, add data, history, reports) -->
+          <!-- LEFT: Main area -->
           <div class="col-lg-8">
               <!-- Search box -->
-              <form method="POST" class="d-flex mb-3">
-                  <input type="text" name="aadhaar" class="form-control me-2" placeholder="Enter Aadhaar Number" required>
-                  <button type="submit" class="btn btn-primary">Search</button>
-              </form>
+              <div class="main-card">
+                  <h5 class="mb-3 text-dark">Search Patient Aadhaar</h5>
+                  <form method="POST" class="d-flex gap-2">
+                      <input type="text" name="aadhaar" class="form-control glass-input" placeholder="Enter Aadhaar Card Number" required>
+                      <button type="submit" class="btn btn-action btn-primary px-4">Search</button>
+                  </form>
+              </div>
 
               {% if patient %}
-                  <div class="patient-card mb-3">
-                      <h3>{{ patient.name }}</h3>
-                      <p><strong>Aadhaar:</strong> {{ patient.aadhaar }}</p>
-                      <p><strong>Age:</strong> {{ patient.age }}</p>
-                      <p><strong>Gender:</strong> {{ patient.gender }}</p>
+                  <!-- Patient Profile Details -->
+                  <div class="main-card">
+                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                          <div>
+                              <h3 class="text-success mb-1">{{ patient.name }}</h3>
+                              <span class="patient-badge">UHID: {{ patient.aadhaar }}</span>
+                          </div>
+                          <div class="text-end">
+                              <div class="text-muted small">Demographics</div>
+                              <strong>{{ patient.age }} Years / {{ patient.gender }}</strong>
+                          </div>
+                      </div>
                   </div>
 
                   <!-- Add Today's Data -->
-                  <h4 class="section-title">Add Today's Data</h4>
-                  <form method="POST" action="{{ url_for('save_history') }}">
-                      <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
-                      <div class="mb-2">
-                          <label class="form-label">Reason of Visit</label>
-                          <textarea class="form-control" name="diagnosis" rows="2" required></textarea>
-                      </div>
-                      <div class="mb-2">
-                          <label class="form-label">Medicine Prescribed</label>
-                          <textarea class="form-control" name="prescription" rows="2"></textarea>
-                      </div>
-                      <div class="mb-2 position-relative">
-                          <label class="form-label">Advised Tests</label>
-                          <input type="text" id="testSearchInput" class="form-control" placeholder="Search tests (e.g. CBC, Lipid)..." autocomplete="off">
-                          <div id="suggestionsList" class="list-group position-absolute w-100 shadow" style="z-index: 1050; max-height: 200px; overflow-y: auto; display: none; background: white;"></div>
-                          <div id="selectedTestsContainer" class="mt-2 d-flex flex-wrap gap-2"></div>
-                          <input type="hidden" name="tests" id="testsHiddenInput">
-                      </div>
-                      <button class="btn btn-success">Save</button>
-                  </form>
+                  <div class="main-card">
+                      <h4 class="section-title">Add Diagnosis & Treatment</h4>
+                      <form method="POST" action="{{ url_for('save_history') }}">
+                          <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                          <div class="mb-3">
+                              <label class="form-label">Diagnosis / Reason of Visit</label>
+                              <textarea class="form-control glass-input" name="diagnosis" rows="2" placeholder="Describe symptoms, assessment, diagnosis details..." required></textarea>
+                          </div>
+                          <div class="mb-3">
+                              <label class="form-label">Medicine Prescribed</label>
+                              <textarea class="form-control glass-input" name="prescription" rows="2" placeholder="e.g. Tab Paracetamol 650mg TDS x 5 Days"></textarea>
+                          </div>
+                          <div class="mb-4 position-relative">
+                              <label class="form-label">Advise Lab Tests</label>
+                              <input type="text" id="testSearchInput" class="form-control glass-input" placeholder="Search tests (e.g. CBC, Lipid, Liver)..." autocomplete="off">
+                              <div id="suggestionsList" class="list-group position-absolute w-100 shadow" style="z-index: 1050; max-height: 200px; overflow-y: auto; display: none; background: white;"></div>
+                              <div id="selectedTestsContainer" class="mt-2 d-flex flex-wrap gap-2"></div>
+                              <input type="hidden" name="tests" id="testsHiddenInput">
+                          </div>
+                          <button class="btn btn-action btn-success px-4">Save & Complete Session</button>
+                      </form>
+                  </div>
 
                   <!-- Patient History -->
-                  <h4 class="section-title">Patient History</h4>
-                  {% if history %}
-                      <table class="table table-bordered">
-                          <thead>
-                              <tr>
-                                  <th>Date</th>
-                                  <th>Reason</th>
-                                  <th>Prescription</th>
-                                  <th>Advised Tests</th>
-                                  <th>Advised By</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {% for h in history %}
-                                  <tr>
-                                      <td>{{ h.visit_date }}</td>
-                                      <td>{{ h.diagnosis }}</td>
-                                      <td>{{ h.prescription }}</td>
-                                      <td>{{ h.advised_tests }}</td>
-                                      <td>{{ h.doctor_name or 'Unknown' }}</td>
-                                  </tr>
-                              {% endfor %}
-                          </tbody>
-                      </table>
-                  {% else %}
-                      <p>No history found.</p>
-                  {% endif %}
+                  <div class="main-card">
+                      <h4 class="section-title">Clinical History Timeline</h4>
+                      {% if history %}
+                          <div class="table-responsive">
+                              <table class="table table-hover align-middle">
+                                  <thead class="table-light">
+                                      <tr>
+                                          <th>Date</th>
+                                          <th>Reason / Diagnosis</th>
+                                          <th>Prescription</th>
+                                          <th>Advised Tests</th>
+                                          <th>Physician</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {% for h in history %}
+                                          <tr>
+                                              <td><span class="text-nowrap fw-semibold">{{ h.visit_date }}</span></td>
+                                              <td>{{ h.diagnosis }}</td>
+                                              <td><code class="text-dark">{{ h.prescription or 'None' }}</code></td>
+                                              <td>
+                                                  {% if h.advised_tests %}
+                                                      <span class="badge bg-warning text-dark">{{ h.advised_tests }}</span>
+                                                  {% else %}
+                                                      <span class="text-muted">-</span>
+                                                  {% endif %}
+                                              </td>
+                                              <td><small class="fw-bold">{{ h.doctor_name or 'Unknown' }}</small></td>
+                                          </tr>
+                                      {% endfor %}
+                                  </tbody>
+                              </table>
+                          </div>
+                      {% else %}
+                          <p class="text-muted">No clinical history recorded yet.</p>
+                      {% endif %}
+                  </div>
 
                   <!-- Lab Reports -->
-                  <h4 class="section-title">Lab Reports</h4>
-                  {% if reports %}
-                      <table class="table table-striped">
-                          <thead>
-                              <tr>
-                                  <th>Date</th>
-                                  <th>Type</th>
-                                  <th>Uploaded By</th>
-                                  <th>Action</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {% for r in reports %}
-                                  <tr>
-                                      <td>{{ r.report_date }}</td>
-                                      <td>{{ r.report_type }}</td>
-                                      <td>{{ r.uploaded_by or 'Unknown' }}</td>
-                                      <td>
-                                          <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="viewReportModal('{{ url_for('view_report', report_id=r.id) }}', '{{ r.report_type }}')">View</button>
-                                          <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-primary">Download</a>
-                                      </td>
-                                  </tr>
-                              {% endfor %}
-                          </tbody>
-                      </table>
-                  {% else %}
-                      <p>No lab reports available.</p>
-                  {% endif %}
+                  <div class="main-card">
+                      <h4 class="section-title">Lab Reports & Investigations</h4>
+                      {% if reports %}
+                          <div class="table-responsive">
+                              <table class="table table-hover align-middle">
+                                  <thead class="table-light">
+                                      <tr>
+                                          <th>Date</th>
+                                          <th>Test Name</th>
+                                          <th>Uploaded By</th>
+                                          <th class="text-end">Actions</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {% for r in reports %}
+                                          <tr>
+                                              <td><span class="fw-semibold">{{ r.report_date }}</span></td>
+                                              <td><strong>{{ r.report_type }}</strong></td>
+                                              <td><small>{{ r.uploaded_by or 'Lab Desk' }}</small></td>
+                                              <td class="text-end">
+                                                  <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="viewReportModal('{{ url_for('view_report', report_id=r.id) }}', '{{ r.report_type }}')">View Inline</button>
+                                                  <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-success text-white">Download</a>
+                                              </td>
+                                          </tr>
+                                      {% endfor %}
+                                  </tbody>
+                              </table>
+                          </div>
+                      {% else %}
+                          <p class="text-muted">No lab reports submitted yet.</p>
+                      {% endif %}
+                  </div>
               {% else %}
-                  <p class="text-muted">Search a patient Aadhaar on the left to view details, add today's data, view history and lab reports.</p>
+                  <div class="alert alert-info py-3 border-0 shadow-sm rounded-3">
+                      Search a patient Aadhaar on the left panel, or select from your assigned queue to access details, medical history and lab investigation records.
+                  </div>
               {% endif %}
           </div>
 
-          <!-- RIGHT: Recent patients panel -->
+          <!-- RIGHT: Assigned queue -->
           <div class="col-lg-4">
-              <div class="card recent-panel p-3">
-                  <h5>Assigned Patients (Recent 20)</h5>
+              <div class="card main-card recent-panel">
+                  <h5 class="border-bottom pb-2 fw-bold text-dark mb-3">Today's Assigned Patients</h5>
                   <form id="selectRecentForm" method="POST" action="{{ url_for('doctor_dashboard') }}">
                       <input type="hidden" name="selected_aadhaar" id="selected_aadhaar">
                   </form>
-                  <ul class="list-group list-group-flush mt-2">
+                  <div class="list-group list-group-flush">
                       {% for p in recent_patients %}
-                          <li class="list-group-item d-flex justify-content-between align-items-center">
-                              <div>
-                                  <strong>{{ p.name }}</strong><br>
-                                  <small>{{ p.aadhaar }}</small>
+                          <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-1 bg-transparent border-bottom">
+                              <div style="min-width: 0; flex: 1;">
+                                  <h6 class="mb-1 text-truncate text-dark">{{ p.name }}</h6>
+                                  <small class="text-muted d-block">Aadhaar: {{ p.aadhaar }}</small>
                               </div>
-                              <div>
-                                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectRecent('{{ p.aadhaar }}')">Open</button>
-                              </div>
-                          </li>
+                              <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1" onclick="selectRecent('{{ p.aadhaar }}')">Open</button>
+                          </div>
                       {% endfor %}
-                  </ul> 
+                      {% if not recent_patients %}
+                          <p class="text-muted">No appointments booked under your name today.</p>
+                      {% endif %}
+                  </div> 
               </div>
           </div>
       </div>
@@ -159,32 +261,15 @@ function selectRecent(aadhaar) {
 }
 
 const availableTests = [
-    "Complete Blood Count (CBC)",
-    "Lipid Profile",
-    "Liver Function Test (LFT)",
-    "Kidney Function Test (KFT)",
-    "Thyroid Profile (T3, T4, TSH)",
-    "Blood Glucose (Fasting)",
-    "Blood Glucose (Post Prandial)",
-    "HbA1c (Glycated Haemoglobin)",
-    "Urine Routine & Microscopy",
-    "Chest X-Ray",
-    "Electrocardiogram (ECG)",
-    "Ultrasound Abdomen & Pelvis (USG)",
-    "Echocardiogram (Echo)",
-    "CT Scan Brain",
-    "MRI Spine",
-    "C-Reactive Protein (CRP)",
-    "Rheumatoid Factor (RF)",
-    "Serum Electrolytes",
-    "Widal Test (Typhoid)",
-    "Dengue NS1 Antigen",
-    "Vitamin D (25-Hydroxy)",
-    "Vitamin B12"
+    "Complete Blood Count (CBC)", "Lipid Profile", "Liver Function Test (LFT)", "Kidney Function Test (KFT)",
+    "Thyroid Profile (T3, T4, TSH)", "Blood Glucose (Fasting)", "Blood Glucose (Post Prandial)",
+    "HbA1c (Glycated Haemoglobin)", "Urine Routine & Microscopy", "Chest X-Ray", "Electrocardiogram (ECG)",
+    "Ultrasound Abdomen & Pelvis (USG)", "Echocardiogram (Echo)", "CT Scan Brain", "MRI Spine",
+    "C-Reactive Protein (CRP)", "Rheumatoid Factor (RF)", "Serum Electrolytes", "Widal Test (Typhoid)",
+    "Dengue NS1 Antigen", "Vitamin D (25-Hydroxy)", "Vitamin B12"
 ];
 
 const selectedTests = new Set();
-
 const searchInput = document.getElementById('testSearchInput');
 const suggestionsList = document.getElementById('suggestionsList');
 const selectedContainer = document.getElementById('selectedTestsContainer');
@@ -206,27 +291,21 @@ if (searchInput) {
                 item.type = 'button';
                 item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-dark';
                 item.innerHTML = `${match} <span class="badge bg-success rounded-pill">+</span>`;
-                item.onclick = function() {
-                    addTest(match);
-                };
+                item.onclick = function() { addTest(match); };
                 suggestionsList.appendChild(item);
             });
             suggestionsList.style.display = 'block';
         } else {
-            // Option to add custom test
             const item = document.createElement('button');
             item.type = 'button';
             item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-primary';
             item.innerHTML = `Add custom test: "${searchInput.value}" <span class="badge bg-primary rounded-pill">+</span>`;
-            item.onclick = function() {
-                addTest(searchInput.value.trim());
-            };
+            item.onclick = function() { addTest(searchInput.value.trim()); };
             suggestionsList.appendChild(item);
             suggestionsList.style.display = 'block';
         }
     });
 
-    // Close suggestions list on click outside
     document.addEventListener('click', function(e) {
         if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
             suggestionsList.style.display = 'none';
@@ -252,12 +331,10 @@ function renderSelectedTests() {
     const list = Array.from(selectedTests);
     list.forEach(test => {
         const badge = document.createElement('span');
-        badge.className = 'badge bg-primary text-white d-flex align-items-center gap-2 p-2';
+        badge.className = 'badge bg-success text-white d-flex align-items-center gap-2 p-2';
         badge.style.fontSize = '0.9rem';
         badge.innerHTML = `${test} <button type="button" class="btn-close btn-close-white" style="font-size:0.6rem; padding: 0;" aria-label="Remove"></button>`;
-        badge.querySelector('button').onclick = function() {
-            removeTest(test);
-        };
+        badge.querySelector('button').onclick = function() { removeTest(test); };
         selectedContainer.appendChild(badge);
     });
     testsHiddenInput.value = list.join(', ');
@@ -284,8 +361,6 @@ function renderSelectedTests() {
 let reportModal;
 document.addEventListener("DOMContentLoaded", function() {
     reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
-    
-    // Clear iframe src when modal is closed to stop rendering
     document.getElementById('reportModal').addEventListener('hidden.bs.modal', function () {
         document.getElementById('reportFrame').src = '';
     });
