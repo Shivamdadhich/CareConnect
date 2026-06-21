@@ -8,10 +8,10 @@
     <style>
         body {
             padding: 18px;
-            background-color: #f4f6f9;
+            background-color: #f8f9fa;
         }
         .recent-panel {
-            max-height: 75vh;
+            max-height: 80vh;
             overflow-y: auto;
         }
         .patient-card {
@@ -22,26 +22,36 @@
         }
         .section-title {
             font-weight: 700;
-            margin-top: 20px;
-            color: #333;
+            margin-top: 15px;
+            color: #212529;
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
         }
         .pending-item {
             cursor: pointer;
             transition: background-color 0.2s ease;
         }
         .pending-item:hover {
-            background-color: #f1f3f5;
+            background-color: #e9ecef;
+        }
+        .upload-row {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
     <!-- Header Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded-3 mb-4 shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded-2 mb-4 shadow-sm">
         <div class="container-fluid px-3">
-            <a class="navbar-brand font-weight-bold" href="#">CareConnect Lab Portal</a>
+            <a class="navbar-brand fw-bold" href="#">CareConnect Lab Dashboard</a>
             <div class="ms-auto d-flex align-items-center">
-                <span class="navbar-text me-3 text-light">Logged in: <strong>{{ session.get('lab_name') }}</strong></span>
+                <span class="navbar-text me-3 text-light">User: <strong>{{ session.get('lab_name') }}</strong></span>
                 <a href="{{ url_for('lab_logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
             </div>
         </div>
@@ -75,10 +85,10 @@
                 {% if patient %}
                     <!-- Demographics -->
                     <div class="patient-card mb-3 shadow-sm">
-                        <h4 class="section-title mt-0 text-primary">Patient Demographics</h4>
-                        <div class="row mt-2">
+                        <h4 class="section-title text-primary">Patient Demographics</h4>
+                        <div class="row">
                             <div class="col-md-3 col-sm-6 mb-2">
-                                <small class="text-muted d-block">Name</small>
+                                <small class="text-muted d-block font-weight-bold">Name</small>
                                 <strong>{{ patient.name }}</strong>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-2">
@@ -96,64 +106,59 @@
                         </div>
                     </div>
 
-                    <!-- Advised Tests -->
+                    <!-- Upload report form per advised test -->
                     <div class="patient-card mb-3 shadow-sm">
-                        <h4 class="section-title mt-0 text-warning">Advised Tests (from History)</h4>
-                        {% if history %}
-                            <table class="table table-bordered table-striped mt-2">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 25%;">Visit Date</th>
-                                        <th>Advised Tests</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for h in history %}
-                                        <tr>
-                                            <td>{{ h.visit_date }}</td>
-                                            <td>
-                                                {% if h.advised_tests %}
-                                                    <span class="badge bg-warning text-dark" style="font-size: 0.9rem;">{{ h.advised_tests }}</span>
-                                                {% else %}
-                                                    <span class="text-muted">None advised</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                        <h4 class="section-title text-success">Upload Pending Reports (Upload Individually)</h4>
+                        
+                        {% if advised_tests_list %}
+                            <p class="text-muted small">Please upload the report file corresponding to each advised test below:</p>
+                            {% for test in advised_tests_list %}
+                                <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="upload-row d-flex align-items-center flex-wrap gap-2">
+                                    <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                                    <input type="hidden" name="report_type" value="{{ test }}">
+                                    
+                                    <div style="flex: 2; min-width: 200px;">
+                                        <span class="fw-bold text-dark">{{ test }}</span>
+                                    </div>
+                                    <div style="flex: 2; min-width: 150px;">
+                                        <input type="date" name="report_date" class="form-control form-control-sm" required value="{{ today_date }}">
+                                    </div>
+                                    <div style="flex: 3; min-width: 200px;">
+                                        <input type="file" name="report_file" class="form-control form-control-sm" required>
+                                    </div>
+                                    <div style="flex: 1; min-width: 100px;" class="text-end">
+                                        <button type="submit" class="btn btn-sm btn-success w-100">Upload Test</button>
+                                    </div>
+                                </form>
+                            {% endfor %}
                         {% else %}
-                            <p class="text-muted mt-2">No visit history found.</p>
+                            <div class="alert alert-warning py-2 mb-0">No active advised tests found for this patient. You can upload other/custom reports below.</div>
                         {% endif %}
                     </div>
 
-                    <!-- Upload report form -->
+                    <!-- Custom uploads option -->
                     <div class="patient-card mb-3 shadow-sm">
-                        <h4 class="section-title mt-0 text-success">Upload Lab Report</h4>
-                        <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="mt-3">
+                        <h4 class="section-title text-secondary">Upload Custom / Other Report</h4>
+                        <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="upload-row d-flex align-items-center flex-wrap gap-2">
                             <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Report Date</label>
-                                    <input type="date" name="report_date" class="form-control" required value="{{ today_date }}">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Report / Test Type</label>
-                                    <input type="text" name="report_type" class="form-control" placeholder="e.g. Complete Blood Count (CBC)" required>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Select Report PDF/Image File</label>
-                                    <input type="file" name="report_file" class="form-control" required>
-                                </div>
+                            <div style="flex: 2; min-width: 200px;">
+                                <input type="text" name="report_type" class="form-control form-control-sm" placeholder="Custom Test Type (e.g. ECG, MRI)" required>
                             </div>
-                            <button type="submit" class="btn btn-success mt-3 px-4">Upload & Save Report</button>
+                            <div style="flex: 2; min-width: 150px;">
+                                <input type="date" name="report_date" class="form-control form-control-sm" required value="{{ today_date }}">
+                            </div>
+                            <div style="flex: 3; min-width: 200px;">
+                                <input type="file" name="report_file" class="form-control form-control-sm" required>
+                            </div>
+                            <div style="flex: 1; min-width: 100px;" class="text-end">
+                                <button type="submit" class="btn btn-sm btn-secondary w-100">Upload Custom</button>
+                            </div>
                         </form>
                     </div>
 
                     <!-- Uploaded reports history -->
                     <div class="patient-card mb-3 shadow-sm">
-                        <h4 class="section-title mt-0">Uploaded Reports History</h4>
+                        <h4 class="section-title">Uploaded Reports History</h4>
                         {% if reports %}
                             <table class="table table-bordered mt-2">
                                 <thead class="table-light">
@@ -188,8 +193,8 @@
 
             <!-- RIGHT: Pending Tests Sidebar (Oldest 20) -->
             <div class="col-lg-4">
-                <div class="card recent-panel shadow-sm p-3">
-                    <h5 class="border-bottom pb-2">Pending Tests (Oldest 20)</h5>
+                <div class="card recent-panel shadow-sm p-3 bg-white border">
+                    <h5 class="border-bottom pb-2 fw-bold text-dark">Pending Tests (Oldest 20)</h5>
                     <form id="selectPendingForm" method="POST" action="{{ url_for('lab_dashboard') }}">
                         <input type="hidden" name="aadhaar" id="selected_aadhaar_input">
                     </form>
@@ -197,16 +202,16 @@
                     {% if pending_tests %}
                         <div class="list-group list-group-flush">
                             {% for p in pending_tests %}
-                                <div class="list-group-item pending-item d-flex justify-content-between align-items-center py-2 px-1 border-bottom" onclick="selectPending('{{ p.aadhaar }}')">
+                                <div class="list-group-item pending-item d-flex justify-content-between align-items-center py-2 px-1 border-bottom bg-transparent" onclick="selectPending('{{ p.aadhaar }}')">
                                     <div style="flex: 1; min-width: 0; padding-right: 10px;">
-                                        <h6 class="mb-1 text-truncate" style="font-size: 0.95rem;">{{ p.name }}</h6>
+                                        <h6 class="mb-1 text-truncate fw-bold text-dark" style="font-size: 0.95rem;">{{ p.name }}</h6>
                                         <small class="text-muted d-block" style="font-size: 0.8rem;">Aadhaar: {{ p.aadhaar }}</small>
                                         <span class="badge bg-warning text-dark mt-1" style="font-size: 0.75rem; white-space: normal; text-align: left;">
                                             {{ p.advised_tests }}
                                         </span>
                                     </div>
                                     <div class="text-end" style="white-space: nowrap;">
-                                        <span class="text-danger d-block" style="font-size: 0.75rem; font-weight: 600;">Oldest Pending</span>
+                                        <span class="text-danger d-block fw-bold" style="font-size: 0.7rem;">PENDING</span>
                                         <small class="text-muted" style="font-size: 0.75rem;">{{ p.visit_date }}</small>
                                     </div>
                                 </div>

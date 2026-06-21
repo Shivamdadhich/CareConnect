@@ -387,6 +387,18 @@ def lab_dashboard():
             """, (aadhaar,))
             history = cur.fetchall()
 
+            # Extract individual tests
+            advised_tests_list = []
+            seen_tests = set()
+            for h in history:
+                if h["advised_tests"]:
+                    parts = h["advised_tests"].split(",")
+                    for part in parts:
+                        test_name = part.strip()
+                        if test_name and test_name.lower() not in seen_tests:
+                            seen_tests.add(test_name.lower())
+                            advised_tests_list.append(test_name)
+
             # Get previously uploaded reports
             cur.execute("""
                 SELECT id, report_date, report_type 
@@ -417,7 +429,8 @@ def lab_dashboard():
                            reports=reports,
                            aadhaar=aadhaar,
                            today_date=today_date,
-                           pending_tests=pending_tests)
+                           pending_tests=pending_tests,
+                           advised_tests_list=advised_tests_list if aadhaar and patient else [])
 
 @app.route("/lab/upload_report", methods=["POST"])
 def lab_upload_report():
