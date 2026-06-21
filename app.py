@@ -25,6 +25,40 @@ def close_db(error):
     if db_conn is not None and db_conn.open:
         db_conn.close()
 
+# -------------------- Image Compression Utility --------------------
+from PIL import Image
+import io
+
+def compress_image_data(file_name, file_data, max_dim=1200, quality=60):
+    ext = file_name.lower().split('.')[-1]
+    if ext not in ['jpg', 'jpeg', 'png']:
+        return file_data
+    try:
+        img = Image.open(io.BytesIO(file_data))
+        if img.mode in ('RGBA', 'LA'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+            
+        width, height = img.size
+        if width > max_dim or height > max_dim:
+            if width > height:
+                height = int((height * max_dim) / width)
+                width = max_dim
+            else:
+                width = int((width * max_dim) / height)
+                height = max_dim
+            img = img.resize((width, height), Image.Resampling.LANCZOS)
+            
+        out = io.BytesIO()
+        img.save(out, format='JPEG', quality=quality, optimize=True)
+        return out.getvalue()
+    except Exception as e:
+        print("Failed to compress image:", e)
+        return file_data
+
 # -------------------- Home --------------------
 @app.route("/")
 def home():
@@ -649,7 +683,7 @@ def lab_upload_report():
         report_date = request.form.get("report_date")
         if file and file.filename != '':
             file_name = file.filename
-            file_data = file.read()
+            file_data = compress_image_data(file_name, file.read())
 
             cur = mysql.connection.cursor()
             cur.execute("""
@@ -677,7 +711,7 @@ def lab_upload_report():
 
             if file and file.filename != '':
                 file_name = file.filename
-                file_data = file.read()
+                file_data = compress_image_data(file_name, file.read())
 
                 # Convert to integer if exists
                 h_id = int(history_id) if history_id else None
@@ -714,7 +748,7 @@ def api_lab_upload_report():
         return {"error": "No file uploaded"}, 400
 
     file_name = file.filename
-    file_data = file.read()
+    file_data = compress_image_data(file_name, file.read())
     h_id = int(history_id) if history_id else None
 
     cur = mysql.connection.cursor()

@@ -214,16 +214,32 @@
         function captureFrame() {
             if (!video.srcObject) return;
             
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            let targetWidth = video.videoWidth;
+            let targetHeight = video.videoHeight;
+            const maxDim = 1200;
+            
+            // Downscale image if it exceeds max dimension
+            if (targetWidth > maxDim || targetHeight > maxDim) {
+                if (targetWidth > targetHeight) {
+                    targetHeight = Math.round((targetHeight * maxDim) / targetWidth);
+                    targetWidth = maxDim;
+                } else {
+                    targetWidth = Math.round((targetWidth * maxDim) / targetHeight);
+                    targetHeight = maxDim;
+                }
+            }
+            
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
             
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
+            // Convert to highly compressed JPEG blob
             canvas.toBlob((blob) => {
                 capturedBlobs.push(blob);
                 renderThumbnails();
-            }, 'image/jpeg', 0.85);
+            }, 'image/jpeg', 0.60);
         }
 
         function removeImage(index) {
