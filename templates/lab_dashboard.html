@@ -276,7 +276,7 @@
         submitBtn.disabled = true;
         submitBtn.innerText = "Uploading...";
         
-        for (const upload of uploads) {
+        const uploadPromises = uploads.map(async (upload) => {
             upload.rowElement.style.opacity = "0.5";
             
             const formData = new FormData();
@@ -293,6 +293,8 @@
                 });
                 
                 const result = await response.json();
+                upload.rowElement.style.opacity = "1";
+                
                 if (response.ok && result.success) {
                     upload.rowElement.style.border = "1px solid #10b981";
                     upload.rowElement.style.backgroundColor = "#ecfdf5";
@@ -304,19 +306,24 @@
                             Uploaded Successfully
                         </div>
                     `;
+                    return true;
                 } else {
                     upload.rowElement.style.border = "1px solid #ef4444";
                     upload.rowElement.style.backgroundColor = "#fef2f2";
                     alert(`Error uploading ${upload.reportType}: ${result.error || 'Unknown error'}`);
+                    return false;
                 }
             } catch (error) {
+                upload.rowElement.style.opacity = "1";
                 upload.rowElement.style.border = "1px solid #ef4444";
                 upload.rowElement.style.backgroundColor = "#fef2f2";
                 alert(`Network error uploading ${upload.reportType}`);
+                return false;
             }
-            
-            upload.rowElement.style.opacity = "1";
-        }
+        });
+        
+        // Execute all uploads concurrently
+        await Promise.all(uploadPromises);
         
         // Success notification and refresh
         submitBtn.innerText = "All Selected Uploaded!";
