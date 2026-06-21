@@ -13,6 +13,15 @@
             <div class="col-md-5">
                 <div class="card p-4 shadow-sm">
                     <h3 class="text-center mb-4">Lab In-Charge Login</h3>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} text-center py-2" role="alert">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
                     <form method="POST" action="/lab/login">
                         <div class="mb-3">
                             <label class="form-label">Username</label>

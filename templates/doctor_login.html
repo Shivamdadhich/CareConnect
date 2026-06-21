@@ -13,6 +13,15 @@
             <div class="col-md-5">
                 <div class="card p-4 shadow-sm">
                     <h3 class="text-center mb-4">Doctor Login</h3>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} text-center py-2" role="alert">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
                     <form method="POST" action="{{ url_for('doctor_login') }}">
                         <div class="mb-3">
                             <label class="form-label">Username</label>
@@ -23,12 +32,6 @@
                             <input type="password" name="password" class="form-control" required>
                         </div>
                         <button type="submit" class="btn btn-secondary w-100">Login</button>
-
-                        {% if error %}
-                            <div class="alert alert-danger text-center mt-3">
-                                {{ error }}
-                            </div>
-                        {% endif %}
 
                         <div class="text-center mt-3">
                             <a href="{{ url_for('admin_login') }}">&larr; Back to Admin Login</a>
