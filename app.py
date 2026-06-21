@@ -351,24 +351,40 @@ def save_history():
     scan_token = request.form.get("scan_token")
     visit_date = datetime.today().strftime("%Y-%m-%d")
 
-    file_name = None
-    file_data = None
-
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    if scan_token:
-        cur.execute("SELECT file_name, file_data FROM prescription_scan_sessions WHERE token = %s AND status = 'uploaded'", (scan_token,))
-        session_row = cur.fetchone()
-        if session_row:
-            file_name = session_row["file_name"]
-            file_data = session_row["file_data"]
-            # Clean temporary session
-            cur.execute("DELETE FROM prescription_scan_sessions WHERE token = %s", (scan_token,))
-
     doctor_name = session.get("doctor_name")
+    
+    # Save base history entry
     cur.execute("""
         INSERT INTO patient_history (aadhaar, visit_date, diagnosis, prescription, advised_tests, doctor_name, prescription_image, prescription_image_name)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    """, (aadhaar, visit_date, diagnosis, prescription, tests, doctor_name, file_data, file_name))
+        VALUES (%s, %s, %s, %s, %s, %s, NULL, NULL)
+    """, (aadhaar, visit_date, diagnosis, prescription, tests, doctor_name))
+    history_id = cur.lastrowid
+
+    if scan_token:
+        # Retrieve all uploaded files in this session
+        cur.execute("SELECT file_name, file_data FROM prescription_scan_session_files WHERE token = %s", (scan_token,))
+        session_files = cur.fetchall()
+        if session_files:
+            # Set the first image on legacy column for backward compatibility
+            legacy_name = session_files[0]["file_name"]
+            legacy_data = session_files[0]["file_data"]
+            cur.execute("""
+                UPDATE patient_history 
+                SET prescription_image = %s, prescription_image_name = %s
+                WHERE history_id = %s
+            """, (legacy_data, legacy_name, history_id))
+            
+            # Store all images in the normalized multi-table
+            for sf in session_files:
+                cur.execute("""
+                    INSERT INTO patient_history_prescriptions (history_id, file_name, file_data)
+                    VALUES (%s, %s, %s)
+                """, (history_id, sf["file_name"], sf["file_data"]))
+                
+            # Clear temporary session
+            cur.execute("DELETE FROM prescription_scan_sessions WHERE token = %s", (scan_token,))
+
     mysql.connection.commit()
     cur.close()
 
@@ -880,37 +896,52 @@ def mobile_upload(token):
 
 @app.route("/api/prescription/upload_mobile/<token>", methods=["POST"])
 def api_upload_mobile(token):
-    file = request.files.get("prescription_file")
-    if not file or file.filename == "":
-        return "<h3>Error: No file uploaded</h3>", 400
+    files = request.files.getlist("prescription_file")
+    if not files or all(f.filename == "" for f in files):
+        return "<h3>Error: No files uploaded</h3>", 400
         
-    file_name = file.filename
-    file_data = file.read()
-    
     cur = mysql.connection.cursor()
+    for file in files:
+        if file.filename != "":
+            file_name = file.filename
+            file_data = file.read()
+            cur.execute("""
+                INSERT INTO prescription_scan_session_files (token, file_name, file_data)
+                VALUES (%s, %s, %s)
+            """, (token, file_name, file_data))
+            
     cur.execute("""
         UPDATE prescription_scan_sessions 
-        SET status = 'uploaded', file_name = %s, file_data = %s
+        SET status = 'uploaded'
         WHERE token = %s
-    """, (file_name, file_data, token))
+    """, (token,))
     mysql.connection.commit()
     cur.close()
     
     return """
         <div style='text-align: center; font-family: sans-serif; padding-top: 50px; color: #047857;'>
             <h2>✓ Successfully Synced!</h2>
-            <p>Prescription has been sent to the doctor's screen. You can close this tab now.</p>
+            <p>All prescription pages have been sent to the doctor's screen. You can close this tab now.</p>
         </div>
     """
 
 @app.route("/api/prescription/check_token/<token>")
 def api_check_token(token):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT status, file_name FROM prescription_scan_sessions WHERE token = %s", (token,))
+    cur.execute("SELECT status FROM prescription_scan_sessions WHERE token = %s", (token,))
     session_data = cur.fetchone()
-    cur.close()
     if not session_data:
+        cur.close()
         return {"error": "Token not found"}, 404
+        
+    if session_data["status"] == "uploaded":
+        cur.execute("SELECT file_name FROM prescription_scan_session_files WHERE token = %s", (token,))
+        files = cur.fetchall()
+        file_names = [f["file_name"] for f in files]
+        cur.close()
+        return {"status": "uploaded", "file_name": ", ".join(file_names), "count": len(file_names)}
+        
+    cur.close()
     return session_data
 
 @app.route("/doctor/prescription/raw_image/<int:history_id>")
@@ -926,9 +957,66 @@ def serve_prescription_raw_image(history_id):
         return send_file(BytesIO(data[1]), mimetype=mimetype, as_attachment=False)
     return "Prescription not found", 404
 
+@app.route("/doctor/prescription/multi_raw_image/<int:file_id>")
+def serve_prescription_multi_raw_image(file_id):
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT file_name, file_data FROM patient_history_prescriptions WHERE id = %s", (file_id,))
+    data = cur.fetchone()
+    cur.close()
+    if data and data[1]:
+        mimetype = "image/png"
+        if data[0].lower().endswith(".jpg") or data[0].lower().endswith(".jpeg"):
+            mimetype = "image/jpeg"
+        return send_file(BytesIO(data[1]), mimetype=mimetype, as_attachment=False)
+    return "File not found", 404
+
 @app.route("/doctor/prescription/image/<int:history_id>")
 def serve_prescription_image(history_id):
-    # Returns a styled HTML page to fit the image perfectly within the iframe
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT id, file_name FROM patient_history_prescriptions WHERE history_id = %s", (history_id,))
+    files = cur.fetchall()
+    cur.close()
+    
+    if not files:
+        # Fallback to single legacy image
+        return f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                html, body {{
+                    margin: 0;
+                    padding: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: #0f172a;
+                    overflow: hidden;
+                }}
+                img {{
+                    max-width: 95%;
+                    max-height: 95%;
+                    object-fit: contain;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }}
+            </style>
+        </head>
+        <body>
+            <img src="/doctor/prescription/raw_image/{history_id}" alt="Prescription Receipt">
+        </body>
+        </html>
+        """
+        
+    # Render multiple images in a vertically scrollable container
+    img_tags = ""
+    for f in files:
+        img_tags += f'<div class="img-wrapper"><img src="/doctor/prescription/multi_raw_image/{f["id"]}" alt="{f["file_name"]}"></div>\n'
+        
     return f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -940,16 +1028,24 @@ def serve_prescription_image(history_id):
                 padding: 0;
                 width: 100%;
                 height: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
                 background-color: #0f172a;
-                overflow: hidden;
+            }}
+            .gallery-container {{
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+                padding: 20px;
+                overflow-y: auto;
+                height: calc(100% - 40px);
+            }}
+            .img-wrapper {{
+                max-width: 95%;
+                text-align: center;
             }}
             img {{
-                max-width: 95%;
-                max-height: 95%;
-                object-fit: contain;
+                max-width: 100%;
+                height: auto;
                 border-radius: 12px;
                 box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
                 border: 1px solid rgba(255, 255, 255, 0.1);
@@ -957,7 +1053,9 @@ def serve_prescription_image(history_id):
         </style>
     </head>
     <body>
-        <img src="/doctor/prescription/raw_image/{history_id}" alt="Prescription Receipt">
+        <div class="gallery-container">
+            {img_tags}
+        </div>
     </body>
     </html>
     """

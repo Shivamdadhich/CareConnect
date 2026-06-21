@@ -77,6 +77,22 @@ CREATE TABLE IF NOT EXISTS lab_reports (
     FOREIGN KEY (history_id) REFERENCES patient_history(history_id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS prescription_scan_session_files (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(100) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_data LONGBLOB NOT NULL,
+    FOREIGN KEY (token) REFERENCES prescription_scan_sessions(token) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS patient_history_prescriptions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    history_id INT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_data LONGBLOB NOT NULL,
+    FOREIGN KEY (history_id) REFERENCES patient_history(history_id) ON DELETE CASCADE
+);
+
 -- Seed Initial Test Data
 INSERT INTO receptionists (username, password, name) VALUES
 ('receptionist1', 'pass123', 'Alice Smith'),

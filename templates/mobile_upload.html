@@ -83,12 +83,12 @@
         
         <form action="/api/prescription/upload_mobile/{{ token }}" method="POST" enctype="multipart/form-data" onsubmit="showLoading()">
             <div class="mb-4">
-                <input type="file" name="prescription_file" id="prescription_file" class="form-control glass-input" accept="image/*" capture="environment" required onchange="previewImage(event)">
+                <input type="file" name="prescription_file" id="prescription_file" class="form-control glass-input" accept="image/*" multiple required onchange="previewImages(event)">
+                <small class="text-muted d-block mt-2">You can select multiple files from your gallery.</small>
             </div>
             
             <div id="previewContainer" class="mb-4" style="display: none;">
-                <p class="data-label text-start mb-2 small fw-bold text-success">Captured Image Preview:</p>
-                <img id="imagePreview" src="#" alt="Captured Image">
+                <p class="data-label text-start mb-2 small fw-bold text-success">Captured Images Preview:</p>
             </div>
 
             <button type="submit" id="submitBtn" class="btn btn-action btn-success w-100 justify-content-center">
@@ -98,16 +98,33 @@
     </div>
 
     <script>
-        function previewImage(event) {
+        function previewImages(event) {
             const input = event.target;
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const previewImg = document.getElementById('imagePreview');
-                    previewImg.src = e.target.result;
-                    document.getElementById('previewContainer').style.display = 'block';
-                }
-                reader.readAsDataURL(input.files[0]);
+            const container = document.getElementById('previewContainer');
+            
+            // Clear any old dynamically added previews
+            const oldPreviews = container.querySelectorAll('.img-preview-item');
+            oldPreviews.forEach(el => el.remove());
+            
+            if (input.files && input.files.length > 0) {
+                container.style.display = 'block';
+                Array.from(input.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'img-preview-item mt-2';
+                        img.style.maxWidth = '45%';
+                        img.style.borderRadius = '12px';
+                        img.style.border = '1.5px solid rgba(16, 185, 129, 0.2)';
+                        img.style.height = '100px';
+                        img.style.objectFit = 'cover';
+                        img.style.margin = '4px';
+                        img.style.display = 'inline-block';
+                        container.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                });
             }
         }
 
@@ -116,7 +133,7 @@
             btn.disabled = true;
             btn.innerHTML = `
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Syncing image...
+                Syncing images...
             `;
         }
     </script>
