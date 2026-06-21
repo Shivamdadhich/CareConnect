@@ -359,7 +359,10 @@ def save_history():
         INSERT INTO patient_history (aadhaar, visit_date, diagnosis, prescription, advised_tests, doctor_name, prescription_image, prescription_image_name)
         VALUES (%s, %s, %s, %s, %s, %s, NULL, NULL)
     """, (aadhaar, visit_date, diagnosis, prescription, tests, doctor_name))
-    history_id = cur.lastrowid
+    
+    cur.execute("SELECT LAST_INSERT_ID() as new_id")
+    insert_row = cur.fetchone()
+    history_id = insert_row["new_id"] if insert_row else cur.lastrowid
 
     if scan_token:
         # Retrieve all uploaded files in this session
