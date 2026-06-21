@@ -448,6 +448,9 @@ def lab_dashboard():
             uploaded_by_aadhaar[p_aadhaar] = []
         uploaded_by_aadhaar[p_aadhaar].append(r)
 
+    is_locked_by_other = False
+    locked_by_name = None
+
     if aadhaar:
         cur.execute("SELECT name, aadhaar, age, gender FROM patients WHERE aadhaar = %s", (aadhaar,))
         patient = cur.fetchone()
@@ -455,11 +458,33 @@ def lab_dashboard():
         if patient:
             # Get doctor-advised tests
             cur.execute("""
-                SELECT history_id, visit_date, diagnosis, advised_tests, doctor_name 
+                SELECT history_id, visit_date, diagnosis, advised_tests, doctor_name, locked_by, locked_at 
                 FROM patient_history WHERE aadhaar = %s 
                 ORDER BY visit_date DESC
             """, (aadhaar,))
             history = cur.fetchall()
+
+            # Check if any history record is locked by another staff (lock duration: 10 minutes)
+            current_time = datetime.now()
+            for h in history:
+                l_by = h["locked_by"]
+                l_at = h["locked_at"]
+                if l_by and l_by != session.get("lab_name"):
+                    if l_at and (current_time - l_at) < timedelta(minutes=10):
+                        is_locked_by_other = True
+                        locked_by_name = l_by
+                        break
+
+            # If not locked by another user, claim/update lock for current lab staff
+            if not is_locked_by_other:
+                for h in history:
+                    if h["advised_tests"]:
+                        cur.execute("""
+                            UPDATE patient_history 
+                            SET locked_by = %s, locked_at = NOW() 
+                            WHERE history_id = %s
+                        """, (session.get("lab_name"), h["history_id"]))
+                mysql.connection.commit()
 
             # Extract individual tests that are NOT uploaded yet
             advised_tests_list = []
@@ -503,7 +528,7 @@ def lab_dashboard():
     # Fetch pending tests for sidebar (candidates)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("""
-        SELECT h.history_id, p.name, p.aadhaar, h.visit_date, h.advised_tests, h.doctor_name
+        SELECT h.history_id, p.name, p.aadhaar, h.visit_date, h.advised_tests, h.doctor_name, h.locked_by, h.locked_at
         FROM patient_history h
         JOIN patients p ON h.aadhaar = p.aadhaar
         WHERE h.advised_tests IS NOT NULL AND h.advised_tests != ''
@@ -514,11 +539,22 @@ def lab_dashboard():
 
     # Filter out already uploaded ones
     pending_tests = []
+    current_time = datetime.now()
     for h in all_pending_candidates:
         p_aadhaar = h["aadhaar"]
         h_id = h["history_id"]
         h_date = h["visit_date"]
+        l_by = h["locked_by"]
+        l_at = h["locked_at"]
         uploaded = uploaded_by_aadhaar.get(p_aadhaar, [])
+        
+        # Check active lock
+        is_active_lock = False
+        if l_by and l_at and (current_time - l_at) < timedelta(minutes=10):
+            is_active_lock = True
+        
+        h["is_locked"] = is_active_lock
+        h["locked_by"] = l_by
         
         advised_parts = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
         unuploaded_parts = []
@@ -548,6 +584,8 @@ def lab_dashboard():
                            aadhaar=aadhaar,
                            today_date=today_date,
                            pending_tests=pending_tests,
+                           is_locked_by_other=is_locked_by_other,
+                           locked_by_name=locked_by_name,
                            advised_tests_list=advised_tests_list if aadhaar and patient else [])
 
 @app.route("/lab/upload_report", methods=["POST"])
@@ -638,6 +676,15 @@ def api_lab_upload_report():
         INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, h_id))
+    
+    # Release lock on successful upload
+    if h_id:
+        cur.execute("""
+            UPDATE patient_history 
+            SET locked_by = NULL, locked_at = NULL 
+            WHERE history_id = %s
+        """, (h_id,))
+        
     mysql.connection.commit()
     cur.close()
 

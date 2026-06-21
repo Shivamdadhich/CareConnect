@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS patient_history (
     prescription TEXT,
     advised_tests TEXT,
     doctor_name VARCHAR(100),
+    locked_by VARCHAR(100) DEFAULT NULL,
+    locked_at DATETIME DEFAULT NULL,
     FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE
 );
 

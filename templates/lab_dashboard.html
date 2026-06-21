@@ -108,59 +108,66 @@
                         </div>
                     </div>
 
-                    <!-- Upload report form per advised test -->
-                    <div class="patient-card mb-3 shadow-sm">
-                        <h4 class="section-title text-success">Upload Pending Reports (Upload Selected Together)</h4>
-                        
-                        {% if advised_tests_list %}
-                            <p class="text-muted small">Select the report file for each advised test below and click "Upload Selected" at the bottom to upload them all at once:</p>
-                            <form id="bulkUploadForm" onsubmit="uploadAllSelected(event)">
-                                <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
-                                
-                                {% for test in advised_tests_list %}
-                                    <div class="upload-row d-flex align-items-center flex-wrap gap-2">
-                                        <input type="hidden" name="report_type_{{ loop.index0 }}" value="{{ test.name }}">
-                                        <input type="hidden" name="history_id_{{ loop.index0 }}" value="{{ test.history_id }}">
-                                        
-                                        <div style="flex: 2; min-width: 200px;">
-                                            <span class="fw-bold text-dark">{{ test.name }}</span>
-                                            <br><small class="text-muted">Advised by: <strong>{{ test.doctor_name or 'Unknown' }}</strong></small>
-                                        </div>
-                                        <div style="flex: 2; min-width: 150px;">
-                                            <input type="date" name="report_date_{{ loop.index0 }}" class="form-control form-control-sm" required value="{{ today_date }}">
-                                        </div>
-                                        <div style="flex: 4; min-width: 250px;">
-                                            <input type="file" name="report_file_{{ loop.index0 }}" class="form-control form-control-sm">
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                                
-                                <button type="submit" class="btn btn-success mt-2 px-4">Upload Selected Reports</button>
-                            </form>
-                        {% else %}
-                            <div class="alert alert-warning py-2 mb-0">No active advised tests found for this patient. You can upload other/custom reports below.</div>
-                        {% endif %}
+                     <!-- Upload report form per advised test -->
+                     <div class="patient-card mb-3 shadow-sm">
+                         <h4 class="section-title text-success">Upload Pending Reports (Upload Selected Together)</h4>
+                         
+                         {% if is_locked_by_other %}
+                             <div class="alert alert-danger py-2 mb-3 shadow-sm d-flex align-items-center gap-2">
+                                 <span style="font-size: 1.2rem;">⚠️</span>
+                                 <span>This patient's records are currently being processed by <strong>{{ locked_by_name }}</strong>. Uploads are locked to prevent duplicate submissions.</span>
+                             </div>
+                         {% endif %}
+
+                         {% if advised_tests_list %}
+                             <p class="text-muted small">Select the report file for each advised test below and click "Upload Selected" at the bottom to upload them all at once:</p>
+                             <form id="bulkUploadForm" onsubmit="uploadAllSelected(event)">
+                                 <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                                 
+                                 {% for test in advised_tests_list %}
+                                     <div class="upload-row d-flex align-items-center flex-wrap gap-2">
+                                         <input type="hidden" name="report_type_{{ loop.index0 }}" value="{{ test.name }}">
+                                         <input type="hidden" name="history_id_{{ loop.index0 }}" value="{{ test.history_id }}">
+                                         
+                                         <div style="flex: 2; min-width: 200px;">
+                                             <span class="fw-bold text-dark">{{ test.name }}</span>
+                                             <br><small class="text-muted">Advised by: <strong>{{ test.doctor_name or 'Unknown' }}</strong></small>
+                                         </div>
+                                         <div style="flex: 2; min-width: 150px;">
+                                             <input type="date" name="report_date_{{ loop.index0 }}" class="form-control form-control-sm" required value="{{ today_date }}" {% if is_locked_by_other %}disabled{% endif %}>
+                                         </div>
+                                         <div style="flex: 4; min-width: 250px;">
+                                             <input type="file" name="report_file_{{ loop.index0 }}" class="form-control form-control-sm" {% if is_locked_by_other %}disabled{% endif %}>
+                                         </div>
+                                     </div>
+                                 {% endfor %}
+                                 
+                                 <button type="submit" class="btn btn-success mt-2 px-4" {% if is_locked_by_other %}disabled{% endif %}>Upload Selected Reports</button>
+                             </form>
+                         {% else %}
+                             <div class="alert alert-warning py-2 mb-0">No active advised tests found for this patient. You can upload other/custom reports below.</div>
+                         {% endif %}
                     </div>
 
-                    <!-- Custom uploads option -->
-                    <div class="patient-card mb-3 shadow-sm">
-                        <h4 class="section-title text-secondary">Upload Custom / Other Report</h4>
-                        <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="upload-row d-flex align-items-center flex-wrap gap-2">
-                            <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
-                            <div style="flex: 2; min-width: 200px;">
-                                <input type="text" name="custom_report_type" class="form-control form-control-sm" placeholder="Custom Test Type (e.g. ECG, MRI)" required>
-                            </div>
-                            <div style="flex: 2; min-width: 150px;">
-                                <input type="date" name="report_date" class="form-control form-control-sm" required value="{{ today_date }}">
-                            </div>
-                            <div style="flex: 3; min-width: 200px;">
-                                <input type="file" name="report_file" class="form-control form-control-sm" required>
-                            </div>
-                            <div style="flex: 1; min-width: 100px;" class="text-end">
-                                <button type="submit" class="btn btn-sm btn-secondary w-100">Upload Custom</button>
-                            </div>
-                        </form>
-                    </div>
+                     <!-- Custom uploads option -->
+                     <div class="patient-card mb-3 shadow-sm">
+                         <h4 class="section-title text-secondary">Upload Custom / Other Report</h4>
+                         <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="upload-row d-flex align-items-center flex-wrap gap-2">
+                             <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                             <div style="flex: 2; min-width: 200px;">
+                                 <input type="text" name="custom_report_type" class="form-control form-control-sm" placeholder="Custom Test Type (e.g. ECG, MRI)" required {% if is_locked_by_other %}disabled{% endif %}>
+                             </div>
+                             <div style="flex: 2; min-width: 150px;">
+                                 <input type="date" name="report_date" class="form-control form-control-sm" required value="{{ today_date }}" {% if is_locked_by_other %}disabled{% endif %}>
+                             </div>
+                             <div style="flex: 3; min-width: 200px;">
+                                 <input type="file" name="report_file" class="form-control form-control-sm" required {% if is_locked_by_other %}disabled{% endif %}>
+                             </div>
+                             <div style="flex: 1; min-width: 100px;" class="text-end">
+                                 <button type="submit" class="btn btn-sm btn-secondary w-100" {% if is_locked_by_other %}disabled{% endif %}>Upload Custom</button>
+                             </div>
+                         </form>
+                     </div>
 
                     <!-- Uploaded reports history -->
                     <div class="patient-card mb-3 shadow-sm">
@@ -219,10 +226,15 @@
                                             {{ p.advised_tests }}
                                         </span>
                                     </div>
-                                    <div class="text-end" style="white-space: nowrap;">
-                                        <span class="text-danger d-block fw-bold" style="font-size: 0.7rem;">PENDING</span>
-                                        <small class="text-muted" style="font-size: 0.75rem;">{{ p.visit_date }}</small>
-                                    </div>
+                                     <div class="text-end" style="white-space: nowrap;">
+                                         {% if p.is_locked %}
+                                             <span class="badge bg-danger text-white d-block fw-bold mb-1" style="font-size: 0.65rem;">LOCKED</span>
+                                             <small class="text-muted d-block" style="font-size: 0.65rem; max-width: 80px; overflow: hidden; text-overflow: ellipsis;">by {{ p.locked_by }}</small>
+                                         {% else %}
+                                             <span class="text-danger d-block fw-bold" style="font-size: 0.7rem;">PENDING</span>
+                                         {% endif %}
+                                         <small class="text-muted" style="font-size: 0.75rem;">{{ p.visit_date }}</small>
+                                     </div>
                                 </div>
                             {% endfor %}
                         </div>
