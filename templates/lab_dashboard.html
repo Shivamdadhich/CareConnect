@@ -108,29 +108,31 @@
 
                     <!-- Upload report form per advised test -->
                     <div class="patient-card mb-3 shadow-sm">
-                        <h4 class="section-title text-success">Upload Pending Reports (Upload Individually)</h4>
+                        <h4 class="section-title text-success">Upload Pending Reports (Upload Selected Together)</h4>
                         
                         {% if advised_tests_list %}
-                            <p class="text-muted small">Please upload the report file corresponding to each advised test below:</p>
-                            {% for test in advised_tests_list %}
-                                <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="upload-row d-flex align-items-center flex-wrap gap-2">
-                                    <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
-                                    <input type="hidden" name="report_type" value="{{ test }}">
-                                    
-                                    <div style="flex: 2; min-width: 200px;">
-                                        <span class="fw-bold text-dark">{{ test }}</span>
+                            <p class="text-muted small">Select the report file for each advised test below and click "Upload Selected" at the bottom to upload them all at once:</p>
+                            <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data">
+                                <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                                
+                                {% for test in advised_tests_list %}
+                                    <div class="upload-row d-flex align-items-center flex-wrap gap-2">
+                                        <input type="hidden" name="report_type_{{ loop.index0 }}" value="{{ test }}">
+                                        
+                                        <div style="flex: 2; min-width: 200px;">
+                                            <span class="fw-bold text-dark">{{ test }}</span>
+                                        </div>
+                                        <div style="flex: 2; min-width: 150px;">
+                                            <input type="date" name="report_date_{{ loop.index0 }}" class="form-control form-control-sm" required value="{{ today_date }}">
+                                        </div>
+                                        <div style="flex: 4; min-width: 250px;">
+                                            <input type="file" name="report_file_{{ loop.index0 }}" class="form-control form-control-sm">
+                                        </div>
                                     </div>
-                                    <div style="flex: 2; min-width: 150px;">
-                                        <input type="date" name="report_date" class="form-control form-control-sm" required value="{{ today_date }}">
-                                    </div>
-                                    <div style="flex: 3; min-width: 200px;">
-                                        <input type="file" name="report_file" class="form-control form-control-sm" required>
-                                    </div>
-                                    <div style="flex: 1; min-width: 100px;" class="text-end">
-                                        <button type="submit" class="btn btn-sm btn-success w-100">Upload Test</button>
-                                    </div>
-                                </form>
-                            {% endfor %}
+                                {% endfor %}
+                                
+                                <button type="submit" class="btn btn-success mt-2 px-4">Upload Selected Reports</button>
+                            </form>
                         {% else %}
                             <div class="alert alert-warning py-2 mb-0">No active advised tests found for this patient. You can upload other/custom reports below.</div>
                         {% endif %}
@@ -142,7 +144,7 @@
                         <form method="POST" action="{{ url_for('lab_upload_report') }}" enctype="multipart/form-data" class="upload-row d-flex align-items-center flex-wrap gap-2">
                             <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
                             <div style="flex: 2; min-width: 200px;">
-                                <input type="text" name="report_type" class="form-control form-control-sm" placeholder="Custom Test Type (e.g. ECG, MRI)" required>
+                                <input type="text" name="custom_report_type" class="form-control form-control-sm" placeholder="Custom Test Type (e.g. ECG, MRI)" required>
                             </div>
                             <div style="flex: 2; min-width: 150px;">
                                 <input type="date" name="report_date" class="form-control form-control-sm" required value="{{ today_date }}">

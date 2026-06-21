@@ -438,24 +438,56 @@ def lab_upload_report():
         return redirect(url_for("lab_login"))
 
     aadhaar = request.form.get("aadhaar")
-    report_date = request.form.get("report_date")
-    report_type = request.form.get("report_type")
-    file = request.files.get("report_file")
 
-    if file and file.filename != '':
-        file_name = file.filename
-        file_data = file.read()
+    # 1. Check if it is a single custom upload
+    custom_type = request.form.get("custom_report_type")
+    if custom_type:
+        file = request.files.get("report_file")
+        report_date = request.form.get("report_date")
+        if file and file.filename != '':
+            file_name = file.filename
+            file_data = file.read()
 
-        cur = mysql.connection.cursor()
-        cur.execute("""
-            INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (aadhaar, report_date, report_type, file_name, file_data))
-        mysql.connection.commit()
-        cur.close()
-        flash("Lab report uploaded successfully!", "success")
+            cur = mysql.connection.cursor()
+            cur.execute("""
+                INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (aadhaar, report_date, custom_type, file_name, file_data))
+            mysql.connection.commit()
+            cur.close()
+            flash("Custom report uploaded successfully!", "success")
+        else:
+            flash("Failed to upload custom report. Please select a valid file.", "danger")
+        return redirect(url_for("lab_dashboard", aadhaar=aadhaar))
+
+    # 2. Otherwise, process bulk individual test uploads
+    uploaded_count = 0
+    cur = mysql.connection.cursor()
+
+    for key in request.form:
+        if key.startswith("report_type_"):
+            index = key.split("_")[-1]
+            report_type = request.form.get(key)
+            report_date = request.form.get(f"report_date_{index}")
+            file = request.files.get(f"report_file_{index}")
+
+            if file and file.filename != '':
+                file_name = file.filename
+                file_data = file.read()
+
+                cur.execute("""
+                    INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (aadhaar, report_date, report_type, file_name, file_data))
+                uploaded_count += 1
+
+    mysql.connection.commit()
+    cur.close()
+
+    if uploaded_count > 0:
+        flash(f"Successfully uploaded {uploaded_count} lab report(s)!", "success")
     else:
-        flash("Failed to upload report. Please select a valid file.", "danger")
+        flash("No files were selected for upload.", "warning")
 
     return redirect(url_for("lab_dashboard", aadhaar=aadhaar))
 
