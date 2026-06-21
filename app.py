@@ -10,6 +10,7 @@ import MySQLdb.cursors
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 @app.before_request
 def make_session_permanent():
