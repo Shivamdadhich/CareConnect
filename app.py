@@ -269,22 +269,22 @@ def doctor_dashboard():
             }
 
             cur.execute("""
-                SELECT visit_date, diagnosis, prescription, advised_tests
+                SELECT visit_date, diagnosis, prescription, advised_tests, doctor_name
                 FROM patient_history WHERE aadhaar = %s
                 ORDER BY visit_date DESC
             """, (aadhaar,))
             history = [
-                {"visit_date": h[0], "diagnosis": h[1], "prescription": h[2], "advised_tests": h[3]}
+                {"visit_date": h[0], "diagnosis": h[1], "prescription": h[2], "advised_tests": h[3], "doctor_name": h[4]}
                 for h in cur.fetchall()
             ]
 
             cur.execute("""
-                SELECT id, report_date, report_type
+                SELECT id, report_date, report_type, uploaded_by
                 FROM lab_reports WHERE aadhaar = %s
                 ORDER BY report_date DESC
             """, (aadhaar,))
             reports = [
-                {"id": r[0], "report_date": r[1], "report_type": r[2]}
+                {"id": r[0], "report_date": r[1], "report_type": r[2], "uploaded_by": r[3]}
                 for r in cur.fetchall()
             ]
 
@@ -321,11 +321,12 @@ def save_history():
     tests = request.form.get("tests")
     visit_date = datetime.today().strftime("%Y-%m-%d")
 
+    doctor_name = session.get("doctor_name")
     cur = mysql.connection.cursor()
     cur.execute("""
-        INSERT INTO patient_history (aadhaar, visit_date, diagnosis, prescription, advised_tests)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (aadhaar, visit_date, diagnosis, prescription, tests))
+        INSERT INTO patient_history (aadhaar, visit_date, diagnosis, prescription, advised_tests, doctor_name)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (aadhaar, visit_date, diagnosis, prescription, tests, doctor_name))
     mysql.connection.commit()
     cur.close()
 
@@ -415,9 +416,9 @@ def lab_dashboard():
     if not aadhaar:
         aadhaar = request.args.get("aadhaar")
 
-    # Fetch all uploaded reports to filter pending lists (with date)
+    # Fetch all uploaded reports to filter pending lists (with date and history_id)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT aadhaar, report_type, report_date FROM lab_reports")
+    cur.execute("SELECT id, aadhaar, report_type, report_date, history_id, uploaded_by FROM lab_reports")
     all_uploaded = cur.fetchall()
     
     # Organize uploaded tests by patient
@@ -435,37 +436,44 @@ def lab_dashboard():
         if patient:
             # Get doctor-advised tests
             cur.execute("""
-                SELECT visit_date, diagnosis, advised_tests 
+                SELECT history_id, visit_date, diagnosis, advised_tests, doctor_name 
                 FROM patient_history WHERE aadhaar = %s 
                 ORDER BY visit_date DESC
             """, (aadhaar,))
             history = cur.fetchall()
 
-            # Extract individual tests that are NOT uploaded yet (on or after visit_date)
+            # Extract individual tests that are NOT uploaded yet
             advised_tests_list = []
-            seen_tests = set()
             patient_uploaded = uploaded_by_aadhaar.get(aadhaar, [])
             for h in history:
+                h_id = h["history_id"]
                 h_date = h["visit_date"]
+                doc_name = h["doctor_name"]
                 if h["advised_tests"]:
                     parts = h["advised_tests"].split(",")
                     for part in parts:
                         test_name = part.strip()
-                        if test_name and test_name.lower() not in seen_tests:
-                            seen_tests.add(test_name.lower())
-                            
+                        if test_name:
                             is_uploaded = False
                             for r in patient_uploaded:
-                                if r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
+                                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower():
+                                    is_uploaded = True
+                                    break
+                                # Fallback for legacy database records
+                                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
                                     is_uploaded = True
                                     break
                             
                             if not is_uploaded:
-                                advised_tests_list.append(test_name)
+                                advised_tests_list.append({
+                                    "name": test_name,
+                                    "history_id": h_id,
+                                    "doctor_name": doc_name
+                                })
 
             # Get previously uploaded reports
             cur.execute("""
-                SELECT id, report_date, report_type 
+                SELECT id, report_date, report_type, uploaded_by 
                 FROM lab_reports WHERE aadhaar = %s 
                 ORDER BY report_date DESC
             """, (aadhaar,))
@@ -476,7 +484,7 @@ def lab_dashboard():
     # Fetch pending tests for sidebar (candidates)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("""
-        SELECT p.name, p.aadhaar, h.visit_date, h.advised_tests
+        SELECT h.history_id, p.name, p.aadhaar, h.visit_date, h.advised_tests, h.doctor_name
         FROM patient_history h
         JOIN patients p ON h.aadhaar = p.aadhaar
         WHERE h.advised_tests IS NOT NULL AND h.advised_tests != ''
@@ -485,10 +493,11 @@ def lab_dashboard():
     all_pending_candidates = cur.fetchall()
     cur.close()
 
-    # Filter out already uploaded ones (on or after visit_date)
+    # Filter out already uploaded ones
     pending_tests = []
     for h in all_pending_candidates:
         p_aadhaar = h["aadhaar"]
+        h_id = h["history_id"]
         h_date = h["visit_date"]
         uploaded = uploaded_by_aadhaar.get(p_aadhaar, [])
         
@@ -497,7 +506,10 @@ def lab_dashboard():
         for test_name in advised_parts:
             is_uploaded = False
             for r in uploaded:
-                if r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
+                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower():
+                    is_uploaded = True
+                    break
+                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
                     is_uploaded = True
                     break
             if not is_uploaded:
@@ -525,6 +537,7 @@ def lab_upload_report():
         return redirect(url_for("lab_login"))
 
     aadhaar = request.form.get("aadhaar")
+    uploaded_by = session.get("lab_name")
 
     # 1. Check if it is a single custom upload
     custom_type = request.form.get("custom_report_type")
@@ -537,9 +550,9 @@ def lab_upload_report():
 
             cur = mysql.connection.cursor()
             cur.execute("""
-                INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (aadhaar, report_date, custom_type, file_name, file_data))
+                INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id)
+                VALUES (%s, %s, %s, %s, %s, %s, NULL)
+            """, (aadhaar, report_date, custom_type, file_name, file_data, uploaded_by))
             mysql.connection.commit()
             cur.close()
             flash("Custom report uploaded successfully!", "success")
@@ -556,16 +569,20 @@ def lab_upload_report():
             index = key.split("_")[-1]
             report_type = request.form.get(key)
             report_date = request.form.get(f"report_date_{index}")
+            history_id = request.form.get(f"history_id_{index}")
             file = request.files.get(f"report_file_{index}")
 
             if file and file.filename != '':
                 file_name = file.filename
                 file_data = file.read()
 
+                # Convert to integer if exists
+                h_id = int(history_id) if history_id else None
+
                 cur.execute("""
-                    INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (aadhaar, report_date, report_type, file_name, file_data))
+                    INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, h_id))
                 uploaded_count += 1
 
     mysql.connection.commit()

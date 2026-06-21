@@ -117,10 +117,12 @@
                                 
                                 {% for test in advised_tests_list %}
                                     <div class="upload-row d-flex align-items-center flex-wrap gap-2">
-                                        <input type="hidden" name="report_type_{{ loop.index0 }}" value="{{ test }}">
+                                        <input type="hidden" name="report_type_{{ loop.index0 }}" value="{{ test.name }}">
+                                        <input type="hidden" name="history_id_{{ loop.index0 }}" value="{{ test.history_id }}">
                                         
                                         <div style="flex: 2; min-width: 200px;">
-                                            <span class="fw-bold text-dark">{{ test }}</span>
+                                            <span class="fw-bold text-dark">{{ test.name }}</span>
+                                            <br><small class="text-muted">Advised by: <strong>{{ test.doctor_name or 'Unknown' }}</strong></small>
                                         </div>
                                         <div style="flex: 2; min-width: 150px;">
                                             <input type="date" name="report_date_{{ loop.index0 }}" class="form-control form-control-sm" required value="{{ today_date }}">
@@ -167,6 +169,7 @@
                                     <tr>
                                         <th>Date</th>
                                         <th>Report Type</th>
+                                        <th>Uploaded By</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -175,6 +178,7 @@
                                         <tr>
                                             <td>{{ r.report_date }}</td>
                                             <td><strong>{{ r.report_type }}</strong></td>
+                                            <td>{{ r.uploaded_by or 'Unknown' }}</td>
                                             <td>
                                                 <a href="{{ url_for('download_report', report_id=r.id) }}" class="btn btn-sm btn-outline-primary">Download</a>
                                             </td>
@@ -208,6 +212,7 @@
                                     <div style="flex: 1; min-width: 0; padding-right: 10px;">
                                         <h6 class="mb-1 text-truncate fw-bold text-dark" style="font-size: 0.95rem;">{{ p.name }}</h6>
                                         <small class="text-muted d-block" style="font-size: 0.8rem;">Aadhaar: {{ p.aadhaar }}</small>
+                                        <small class="text-muted d-block" style="font-size: 0.8rem;">Advised by: <strong>{{ p.doctor_name or 'Unknown' }}</strong></small>
                                         <span class="badge bg-warning text-dark mt-1" style="font-size: 0.75rem; white-space: normal; text-align: left;">
                                             {{ p.advised_tests }}
                                         </span>

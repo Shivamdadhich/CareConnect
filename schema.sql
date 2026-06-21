@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS patient_history (
     diagnosis TEXT NOT NULL,
     prescription TEXT,
     advised_tests TEXT,
+    doctor_name VARCHAR(100),
     FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE
 );
 
@@ -58,7 +59,10 @@ CREATE TABLE IF NOT EXISTS lab_reports (
     report_type VARCHAR(100) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
     file_data LONGBLOB NOT NULL,
-    FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE
+    uploaded_by VARCHAR(100),
+    history_id INT,
+    FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE,
+    FOREIGN KEY (history_id) REFERENCES patient_history(history_id) ON DELETE SET NULL
 );
 
 -- Seed Initial Test Data
@@ -66,10 +70,26 @@ INSERT INTO receptionists (username, password, name)
 VALUES ('receptionist1', 'pass123', 'Alice Smith')
 ON DUPLICATE KEY UPDATE name=name;
 
-INSERT INTO doctors (username, password, name, specialization) 
-VALUES ('doctor1', 'pass123', 'Dr. John Doe', 'Cardiology')
-ON DUPLICATE KEY UPDATE name=name;
-
 INSERT INTO lab_staff (username, password, name) 
 VALUES ('lab1', 'pass123', 'Jane Green')
 ON DUPLICATE KEY UPDATE name=name;
+
+-- Seed unique doctors across standard departments (2 doctors per department)
+INSERT INTO doctors (username, password, name, specialization) VALUES
+('doctor1', 'pass123', 'Dr. John Doe', 'Cardiology'),
+('rajesh.khanna', 'pass123', 'Dr. Rajesh Khanna', 'Cardiology'),
+('amit.sharma', 'pass123', 'Dr. Amit Sharma', 'General Medicine'),
+('priya.patel', 'pass123', 'Dr. Priya Patel', 'General Medicine'),
+('sneha.reddy', 'pass123', 'Dr. Sneha Reddy', 'Pediatrics'),
+('vikram.malhotra', 'pass123', 'Dr. Vikram Malhotra', 'Pediatrics'),
+('anil.kapoor', 'pass123', 'Dr. Anil Kapoor', 'Orthopedics'),
+('sunita.williams', 'pass123', 'Dr. Sunita Williams', 'Orthopedics'),
+('kabir.sen', 'pass123', 'Dr. Kabir Sen', 'Dermatology'),
+('neha.gupta', 'pass123', 'Dr. Neha Gupta', 'Dermatology'),
+('sanjay.dutt', 'pass123', 'Dr. Sanjay Dutt', 'Neurology'),
+('aruna.roy', 'pass123', 'Dr. Aruna Roy', 'Neurology'),
+('vijay.mallya', 'pass123', 'Dr. Vijay Mallya', 'Ophthalmology'),
+('kiran.shaw', 'pass123', 'Dr. Kiran Shaw', 'Ophthalmology'),
+('meera.nair', 'pass123', 'Dr. Meera Nair', 'Gynecology'),
+('rohan.joshi', 'pass123', 'Dr. Rohan Joshi', 'Gynecology')
+ON DUPLICATE KEY UPDATE name=VALUES(name), specialization=VALUES(specialization);
