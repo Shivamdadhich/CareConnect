@@ -51,7 +51,17 @@ CREATE TABLE IF NOT EXISTS patient_history (
     doctor_name VARCHAR(100),
     locked_by VARCHAR(100) DEFAULT NULL,
     locked_at DATETIME DEFAULT NULL,
+    prescription_image LONGBLOB DEFAULT NULL,
+    prescription_image_name VARCHAR(255) DEFAULT NULL,
     FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS prescription_scan_sessions (
+    token VARCHAR(100) PRIMARY KEY,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    file_name VARCHAR(255) DEFAULT NULL,
+    file_data LONGBLOB DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS lab_reports (

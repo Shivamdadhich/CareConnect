@@ -290,12 +290,20 @@ def doctor_dashboard():
             }
 
             cur.execute("""
-                SELECT visit_date, diagnosis, prescription, advised_tests, doctor_name
+                SELECT visit_date, diagnosis, prescription, advised_tests, doctor_name, history_id, prescription_image_name
                 FROM patient_history WHERE aadhaar = %s
                 ORDER BY visit_date DESC, history_id DESC
             """, (aadhaar,))
             history = [
-                {"visit_date": h[0], "diagnosis": h[1], "prescription": h[2], "advised_tests": h[3], "doctor_name": h[4]}
+                {
+                    "visit_date": h[0],
+                    "diagnosis": h[1],
+                    "prescription": h[2],
+                    "advised_tests": h[3],
+                    "doctor_name": h[4],
+                    "history_id": h[5],
+                    "prescription_image_name": h[6]
+                }
                 for h in cur.fetchall()
             ]
 
@@ -340,14 +348,27 @@ def save_history():
     diagnosis = request.form.get("diagnosis")
     prescription = request.form.get("prescription")
     tests = request.form.get("tests")
+    scan_token = request.form.get("scan_token")
     visit_date = datetime.today().strftime("%Y-%m-%d")
 
+    file_name = None
+    file_data = None
+
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    if scan_token:
+        cur.execute("SELECT file_name, file_data FROM prescription_scan_sessions WHERE token = %s AND status = 'uploaded'", (scan_token,))
+        session_row = cur.fetchone()
+        if session_row:
+            file_name = session_row["file_name"]
+            file_data = session_row["file_data"]
+            # Clean temporary session
+            cur.execute("DELETE FROM prescription_scan_sessions WHERE token = %s", (scan_token,))
+
     doctor_name = session.get("doctor_name")
-    cur = mysql.connection.cursor()
     cur.execute("""
-        INSERT INTO patient_history (aadhaar, visit_date, diagnosis, prescription, advised_tests, doctor_name)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, (aadhaar, visit_date, diagnosis, prescription, tests, doctor_name))
+        INSERT INTO patient_history (aadhaar, visit_date, diagnosis, prescription, advised_tests, doctor_name, prescription_image, prescription_image_name)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """, (aadhaar, visit_date, diagnosis, prescription, tests, doctor_name, file_data, file_name))
     mysql.connection.commit()
     cur.close()
 
@@ -831,6 +852,79 @@ def view_patient_reports():
         cur.close()
 
     return render_template("patient_reports.html", patient=patient, reports=reports)
+
+# -------------------- Prescription Mobile Scan Features --------------------
+import uuid
+from io import BytesIO
+from flask import send_file
+
+@app.route("/api/prescription/request_token", methods=["POST"])
+def api_request_token():
+    token = str(uuid.uuid4())
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        INSERT INTO prescription_scan_sessions (token, status, file_name, file_data)
+        VALUES (%s, 'pending', NULL, NULL)
+    """, (token,))
+    mysql.connection.commit()
+    cur.close()
+    
+    # Generate dynamic mobile link
+    mobile_url = request.url_root.rstrip('/') + url_for('mobile_upload', token=token)
+    return {"token": token, "mobile_url": mobile_url}
+
+@app.route("/mobile/prescription/upload/<token>")
+def mobile_upload(token):
+    # Public route accessible by mobile devices
+    return render_template("mobile_upload.html", token=token)
+
+@app.route("/api/prescription/upload_mobile/<token>", methods=["POST"])
+def api_upload_mobile(token):
+    file = request.files.get("prescription_file")
+    if not file or file.filename == "":
+        return "<h3>Error: No file uploaded</h3>", 400
+        
+    file_name = file.filename
+    file_data = file.read()
+    
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        UPDATE prescription_scan_sessions 
+        SET status = 'uploaded', file_name = %s, file_data = %s
+        WHERE token = %s
+    """, (file_name, file_data, token))
+    mysql.connection.commit()
+    cur.close()
+    
+    return """
+        <div style='text-align: center; font-family: sans-serif; padding-top: 50px; color: #047857;'>
+            <h2>✓ Successfully Synced!</h2>
+            <p>Prescription has been sent to the doctor's screen. You can close this tab now.</p>
+        </div>
+    """
+
+@app.route("/api/prescription/check_token/<token>")
+def api_check_token(token):
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT status, file_name FROM prescription_scan_sessions WHERE token = %s", (token,))
+    session_data = cur.fetchone()
+    cur.close()
+    if not session_data:
+        return {"error": "Token not found"}, 404
+    return session_data
+
+@app.route("/doctor/prescription/image/<int:history_id>")
+def serve_prescription_image(history_id):
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT prescription_image_name, prescription_image FROM patient_history WHERE history_id = %s", (history_id,))
+    data = cur.fetchone()
+    cur.close()
+    if data and data[1]:
+        mimetype = "image/png"
+        if data[0].lower().endswith(".jpg") or data[0].lower().endswith(".jpeg"):
+            mimetype = "image/jpeg"
+        return send_file(BytesIO(data[1]), mimetype=mimetype, as_attachment=False)
+    return "Prescription not found", 404
 
 # -------------------- Other Staff Login --------------------
 @app.route("/other/login", methods=["GET", "POST"])

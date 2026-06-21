@@ -130,6 +130,7 @@
                       <h4 class="section-title">Add Diagnosis & Treatment</h4>
                       <form method="POST" action="{{ url_for('save_history') }}">
                           <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                          <input type="hidden" name="scan_token" id="scan_token_input">
                           <div class="mb-3">
                               <label class="form-label">Diagnosis / Reason of Visit</label>
                               <textarea class="form-control glass-input" name="diagnosis" rows="2" placeholder="Describe symptoms, assessment, diagnosis details..." required></textarea>
@@ -138,6 +139,18 @@
                               <label class="form-label">Medicine Prescribed</label>
                               <textarea class="form-control glass-input" name="prescription" rows="2" placeholder="e.g. Tab Paracetamol 650mg TDS x 5 Days"></textarea>
                           </div>
+                          
+                          <!-- Mobile QR scan widget -->
+                          <div class="mb-3 p-3 border rounded-3 bg-light d-flex align-items-center justify-content-between flex-wrap gap-2">
+                              <div style="flex: 1; min-width: 250px;">
+                                  <label class="form-label mb-1">Prescription Receipt Upload (Via Mobile Scanner)</label>
+                                  <p class="text-muted small mb-0" id="scan_status_text">Click to generate a QR code, scan with your phone, and capture the receipt using your camera.</p>
+                              </div>
+                              <div>
+                                  <button type="button" class="btn btn-sm btn-outline-success px-3" onclick="openPrescriptionScanner()">📸 Scan Prescription Receipt</button>
+                              </div>
+                          </div>
+
                           <div class="mb-4 position-relative">
                               <label class="form-label">Advise Lab Tests</label>
                               <input type="text" id="testSearchInput" class="form-control glass-input" placeholder="Search tests (e.g. CBC, Lipid, Liver)..." autocomplete="off">
@@ -169,7 +182,16 @@
                                           <tr>
                                               <td><span class="text-nowrap fw-semibold">{{ h.visit_date }}</span></td>
                                               <td>{{ h.diagnosis }}</td>
-                                              <td><code class="text-dark">{{ h.prescription or 'None' }}</code></td>
+                                              <td>
+                                                  <code class="text-dark">{{ h.prescription or 'None' }}</code>
+                                                  {% if h.prescription_image_name %}
+                                                      <div class="mt-1">
+                                                          <button type="button" class="btn btn-sm btn-link text-success p-0 d-inline-flex align-items-center gap-1" style="font-size: 0.85rem;" onclick="viewReportModal('{{ url_for('serve_prescription_image', history_id=h.history_id) }}', 'Receipt: {{ h.prescription_image_name }}')">
+                                                              📄 View Receipt
+                                                          </button>
+                                                      </div>
+                                                  {% endif %}
+                                              </td>
                                               <td>
                                                   {% if h.advised_tests %}
                                                       <span class="badge bg-warning text-dark">{{ h.advised_tests }}</span>
@@ -356,13 +378,45 @@ function renderSelectedTests() {
     </div>
 </div>
 
+<!-- Prescription Scanner QR Modal -->
+<div class="modal fade" id="prescriptionScannerModal" tabindex="-1" aria-labelledby="prescriptionScannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; overflow: hidden;">
+            <div class="modal-header bg-success text-white py-3 border-0">
+                <h5 class="modal-title fw-bold" id="prescriptionScannerModalLabel">📸 Scan Prescription Receipt</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);">
+                <p class="text-muted small mb-4">Scan the QR code below using your mobile camera or Google Lens to open the uploader.</p>
+                <div class="bg-white p-3 rounded-4 shadow-sm mx-auto mb-4" style="width: fit-content; border: 1.5px solid rgba(16, 185, 129, 0.2);">
+                    <img id="scannerQrCode" src="" alt="QR Code" style="width: 200px; height: 200px; display: block;">
+                </div>
+                <div id="modalStatusText" class="text-muted small d-flex align-items-center justify-content-center">
+                    <span class="spinner-border spinner-border-sm text-success me-2" role="status"></span>
+                    Waiting for mobile scan & upload...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 let reportModal;
+let scannerModal;
+let pollInterval;
+
 document.addEventListener("DOMContentLoaded", function() {
     reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
     document.getElementById('reportModal').addEventListener('hidden.bs.modal', function () {
         document.getElementById('reportFrame').src = '';
+    });
+    
+    scannerModal = new bootstrap.Modal(document.getElementById('prescriptionScannerModal'));
+    document.getElementById('prescriptionScannerModal').addEventListener('hidden.bs.modal', function () {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+        }
     });
 });
 
@@ -370,6 +424,52 @@ function viewReportModal(url, reportType) {
     document.getElementById('modalReportTitle').innerText = reportType;
     document.getElementById('reportFrame').src = url;
     reportModal.show();
+}
+
+function openPrescriptionScanner() {
+    fetch("/api/prescription/request_token", {
+        method: "POST"
+    })
+    .then(response => response.json())
+    .then(data => {
+        const token = data.token;
+        const mobileUrl = data.mobile_url;
+        
+        const qrImage = document.getElementById("scannerQrCode");
+        qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(mobileUrl)}`;
+        
+        document.getElementById("scan_token_input").value = token;
+        
+        const statusText = document.getElementById("modalStatusText");
+        statusText.innerHTML = `<span class="spinner-border spinner-border-sm text-success me-2" role="status"></span>Waiting for mobile scan & upload...`;
+        statusText.className = "text-muted small d-flex align-items-center justify-content-center";
+        
+        scannerModal.show();
+        
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => {
+            fetch(`/api/prescription/check_token/${token}`)
+            .then(res => res.json())
+            .then(statusData => {
+                if (statusData.status === 'uploaded') {
+                    clearInterval(pollInterval);
+                    statusText.innerHTML = `<span class="fs-4 text-success me-2">✓</span> Successfully Synced!`;
+                    statusText.className = "text-success fw-bold d-flex align-items-center justify-content-center";
+                    
+                    document.getElementById("scan_status_text").innerHTML = `<strong class="text-success">✓ Prescription receipt uploaded:</strong> ${statusData.file_name}`;
+                    
+                    setTimeout(() => {
+                        scannerModal.hide();
+                    }, 1500);
+                }
+            })
+            .catch(err => console.error("Error checking scan session status:", err));
+        }, 2000);
+    })
+    .catch(err => {
+        console.error("Error requesting scan token:", err);
+        alert("Failed to initialize scanner. Please try again.");
+    });
 }
 </script>
 </body>
