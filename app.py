@@ -913,8 +913,8 @@ def api_check_token(token):
         return {"error": "Token not found"}, 404
     return session_data
 
-@app.route("/doctor/prescription/image/<int:history_id>")
-def serve_prescription_image(history_id):
+@app.route("/doctor/prescription/raw_image/<int:history_id>")
+def serve_prescription_raw_image(history_id):
     cur = mysql.connection.cursor()
     cur.execute("SELECT prescription_image_name, prescription_image FROM patient_history WHERE history_id = %s", (history_id,))
     data = cur.fetchone()
@@ -925,6 +925,42 @@ def serve_prescription_image(history_id):
             mimetype = "image/jpeg"
         return send_file(BytesIO(data[1]), mimetype=mimetype, as_attachment=False)
     return "Prescription not found", 404
+
+@app.route("/doctor/prescription/image/<int:history_id>")
+def serve_prescription_image(history_id):
+    # Returns a styled HTML page to fit the image perfectly within the iframe
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            html, body {{
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: #0f172a;
+                overflow: hidden;
+            }}
+            img {{
+                max-width: 95%;
+                max-height: 95%;
+                object-fit: contain;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }}
+        </style>
+    </head>
+    <body>
+        <img src="/doctor/prescription/raw_image/{history_id}" alt="Prescription Receipt">
+    </body>
+    </html>
+    """
 
 # -------------------- Other Staff Login --------------------
 @app.route("/other/login", methods=["GET", "POST"])
