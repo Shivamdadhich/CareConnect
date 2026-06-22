@@ -38,17 +38,17 @@ class MySQLWrapper:
 
     @property
     def connection(self):
-        from flask import has_request_context, g
-        if has_request_context():
-            # Store connection inside the request context 'g' to prevent thread-safety issues during parallel requests
-            if 'db_conn' not in g or not g.db_conn.open:
-                g.db_conn = self._create_connection()
-            return g.db_conn
+        # Reuse a global/instance-level connection to leverage serverless warm container reuse.
+        # This completely avoids reconnecting on every request when the container is warm.
+        if self._conn is None or not self._conn.open:
+            self._conn = self._create_connection()
         else:
-            # Fallback for CLI/scripts
-            if self._conn is None or not self._conn.open:
+            try:
+                # Ping the connection and reconnect if it went away
+                self._conn.ping(reconnect=True)
+            except Exception:
                 self._conn = self._create_connection()
-            return self._conn
+        return self._conn
 
 mysql_instance = None
 

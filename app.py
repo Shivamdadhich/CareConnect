@@ -7,10 +7,15 @@ import MySQLdb
 import MySQLdb.cursors
 
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = "supersecretkey"
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 @app.before_request
 def make_session_permanent():
@@ -18,12 +23,12 @@ def make_session_permanent():
 
 mysql = get_connection(app)
 
-from flask import g
-@app.teardown_appcontext
-def close_db(error):
-    db_conn = g.pop('db_conn', None)
-    if db_conn is not None and db_conn.open:
-        db_conn.close()
+# @app.teardown_appcontext
+# def close_db(error):
+#     from flask import g
+#     db_conn = g.pop('db_conn', None)
+#     if db_conn is not None and db_conn.open:
+#         db_conn.close()
 
 # -------------------- Image Compression Utility --------------------
 from PIL import Image
