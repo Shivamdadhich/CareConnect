@@ -622,67 +622,47 @@ def lab_dashboard():
                         """, (session.get("lab_name"), h["history_id"]))
                 mysql.connection.commit()
 
-            # Extract individual tests that are NOT uploaded yet
-            advised_tests_list = []
-            patient_uploaded = uploaded_by_aadhaar.get(aadhaar, [])
-            for h in history:
-                h_id = h["history_id"]
-                h_date = h["visit_date"]
-                doc_name = h["doctor_name"]
-                if h["advised_tests"]:
-                    parts = h["advised_tests"].split(",")
-                    for part in parts:
-                        test_name = part.strip()
-                        if test_name:
-                            is_uploaded = False
-                            for r in patient_uploaded:
-                                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower():
-                                    is_uploaded = True
-                                    break
-                                # Fallback for legacy database records
-                                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
-                                    is_uploaded = True
-                                    break
-                            
-                            if not is_uploaded:
-                                advised_tests_list.append({
-                                    "name": test_name,
-                                    "history_id": h_id,
-                                    "doctor_name": doc_name
-                                })
+            # Extract individual tests that are paid but NOT uploaded yet
+            cur.execute("""
+                SELECT lr.report_type as name, lr.history_id, COALESCE(h.doctor_name, 'Doctor') as doctor_name
+                FROM lab_reports lr
+                LEFT JOIN patient_history h ON lr.history_id = h.history_id
+                WHERE lr.aadhaar = %s AND lr.file_name = 'Pending Upload'
+            """, (aadhaar,))
+            advised_tests_list = cur.fetchall()
 
-            # Get previously uploaded reports
+            # Get previously uploaded reports (fully completed)
             cur.execute("""
                 SELECT id, report_date, report_type, uploaded_by 
-                FROM lab_reports WHERE aadhaar = %s 
+                FROM lab_reports WHERE aadhaar = %s AND file_name != 'Pending Upload'
                 ORDER BY report_date DESC, id DESC
             """, (aadhaar,))
             reports = cur.fetchall()
             
         cur.close()
 
-    # Fetch pending tests for sidebar (candidates)
+    # Fetch pending tests for sidebar (candidates where payment is cleared but file is pending upload)
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cur.execute("""
-        SELECT h.history_id, p.name, p.aadhaar, h.visit_date, h.advised_tests, h.doctor_name, h.locked_by, h.locked_at
-        FROM patient_history h
-        JOIN patients p ON h.aadhaar = p.aadhaar
-        WHERE h.advised_tests IS NOT NULL AND h.advised_tests != ''
-        ORDER BY h.visit_date ASC
+        SELECT lr.history_id, p.name, p.aadhaar, lr.report_date as visit_date, 
+               GROUP_CONCAT(lr.report_type SEPARATOR ', ') as advised_tests, 
+               COALESCE(h.doctor_name, 'Doctor') as doctor_name, h.locked_by, h.locked_at
+        FROM lab_reports lr
+        JOIN patients p ON lr.aadhaar = p.aadhaar
+        LEFT JOIN patient_history h ON lr.history_id = h.history_id
+        WHERE lr.file_name = 'Pending Upload'
+        GROUP BY lr.history_id, p.name, p.aadhaar, lr.report_date, h.doctor_name, h.locked_by, h.locked_at
+        ORDER BY lr.report_date ASC
     """)
-    all_pending_candidates = cur.fetchall()
+    pending_candidates = cur.fetchall()
     cur.close()
 
-    # Filter out already uploaded ones
+    # Filter out and format
     pending_tests = []
     current_time = datetime.now()
-    for h in all_pending_candidates:
-        p_aadhaar = h["aadhaar"]
-        h_id = h["history_id"]
-        h_date = h["visit_date"]
+    for h in pending_candidates:
         l_by = h["locked_by"]
         l_at = h["locked_at"]
-        uploaded = uploaded_by_aadhaar.get(p_aadhaar, [])
         
         # Check active lock
         is_active_lock = False
@@ -691,26 +671,9 @@ def lab_dashboard():
         
         h["is_locked"] = is_active_lock
         h["locked_by"] = l_by
-        
-        advised_parts = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
-        unuploaded_parts = []
-        for test_name in advised_parts:
-            is_uploaded = False
-            for r in uploaded:
-                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower():
-                    is_uploaded = True
-                    break
-                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
-                    is_uploaded = True
-                    break
-            if not is_uploaded:
-                unuploaded_parts.append(test_name)
-        
-        if unuploaded_parts:
-            h["advised_tests"] = ", ".join(unuploaded_parts)
-            pending_tests.append(h)
-            if len(pending_tests) >= 20:
-                break
+        pending_tests.append(h)
+        if len(pending_tests) >= 20:
+            break
 
     today_date = date.today().strftime("%Y-%m-%d")
     return render_template("lab_dashboard.html",
@@ -860,18 +823,7 @@ def api_lab_pending_tests():
     active_aadhaar = request.args.get("active_aadhaar")
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-    # 1. Fetch all uploaded reports to filter pending lists
-    cur.execute("SELECT id, aadhaar, report_type, report_date, history_id, file_name FROM lab_reports")
-    all_uploaded = cur.fetchall()
-    
-    uploaded_by_aadhaar = {}
-    for r in all_uploaded:
-        p_aadhaar = r["aadhaar"]
-        if p_aadhaar not in uploaded_by_aadhaar:
-            uploaded_by_aadhaar[p_aadhaar] = []
-        uploaded_by_aadhaar[p_aadhaar].append(r)
-
-    # 2. Check lock of the active patient
+    # 1. Check lock of the active patient
     is_locked_by_other = False
     locked_by_name = None
     if active_aadhaar:
@@ -891,59 +843,44 @@ def api_lab_pending_tests():
                     locked_by_name = l_by
                     break
 
-    # 3. Fetch all pending tests for sidebar (candidates)
+    # 2. Fetch all pending tests for sidebar (candidates where payment is cleared but file is pending upload)
     cur.execute("""
-        SELECT h.history_id, p.name, p.aadhaar, h.visit_date, h.advised_tests, h.doctor_name, h.locked_by, h.locked_at
-        FROM patient_history h
-        JOIN patients p ON h.aadhaar = p.aadhaar
-        WHERE h.advised_tests IS NOT NULL AND h.advised_tests != ''
-        ORDER BY h.visit_date ASC
+        SELECT lr.history_id, p.name, p.aadhaar, lr.report_date as visit_date, 
+               GROUP_CONCAT(lr.report_type SEPARATOR ', ') as advised_tests, 
+               COALESCE(h.doctor_name, 'Doctor') as doctor_name, h.locked_by, h.locked_at
+        FROM lab_reports lr
+        JOIN patients p ON lr.aadhaar = p.aadhaar
+        LEFT JOIN patient_history h ON lr.history_id = h.history_id
+        WHERE lr.file_name = 'Pending Upload'
+        GROUP BY lr.history_id, p.name, p.aadhaar, lr.report_date, h.doctor_name, h.locked_by, h.locked_at
+        ORDER BY lr.report_date ASC
     """)
-    all_pending_candidates = cur.fetchall()
+    pending_candidates = cur.fetchall()
     cur.close()
 
     pending_tests = []
     current_time = datetime.now()
-    for h in all_pending_candidates:
-        p_aadhaar = h["aadhaar"]
-        h_id = h["history_id"]
-        h_date = h["visit_date"]
+    for h in pending_candidates:
         l_by = h["locked_by"]
         l_at = h["locked_at"]
-        uploaded = uploaded_by_aadhaar.get(p_aadhaar, [])
         
         # Check active lock
         is_active_lock = False
         if l_by and l_at and (current_time - l_at) < timedelta(minutes=10):
             is_active_lock = True
         
-        advised_parts = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
-        unuploaded_parts = []
-        for test_name in advised_parts:
-            is_uploaded = False
-            for r in uploaded:
-                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower() and r["file_name"] != 'Pending Upload':
-                    is_uploaded = True
-                    break
-                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date and r["file_name"] != 'Pending Upload':
-                    is_uploaded = True
-                    break
-            if not is_uploaded:
-                unuploaded_parts.append(test_name)
-        
-        if unuploaded_parts:
-            pending_tests.append({
-                "history_id": h_id,
-                "name": h["name"],
-                "aadhaar": p_aadhaar,
-                "visit_date": h_date.strftime("%Y-%m-%d"),
-                "advised_tests": ", ".join(unuploaded_parts),
-                "doctor_name": h["doctor_name"],
-                "is_locked": is_active_lock,
-                "locked_by": l_by
-            })
-            if len(pending_tests) >= 20:
-                break
+        pending_tests.append({
+            "history_id": h["history_id"],
+            "name": h["name"],
+            "aadhaar": h["aadhaar"],
+            "visit_date": h["visit_date"].strftime("%Y-%m-%d"),
+            "advised_tests": h["advised_tests"],
+            "doctor_name": h["doctor_name"],
+            "is_locked": is_active_lock,
+            "locked_by": l_by
+        })
+        if len(pending_tests) >= 20:
+            break
 
     return {
         "pending_tests": pending_tests,
