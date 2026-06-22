@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | CareConnect</title>
+    <!-- Google Fonts & Bootstrap -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f6fffa 100%) !important;
+            min-height: 100vh;
+            color: #064e3b;
+        }
+        .navbar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            border-bottom: 1.5px solid rgba(16, 185, 129, 0.15);
+        }
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(4, 120, 87, 0.04);
+            margin-bottom: 24px;
+        }
+        .metric-card {
+            background: #ffffff;
+            border: 1.5px solid rgba(16, 185, 129, 0.15);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(4, 120, 87, 0.02);
+            transition: all 0.25s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: #10b981;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.08);
+        }
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #064e3b;
+        }
+        .metric-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #047857;
+            font-weight: 700;
+        }
+        .form-control, .btn {
+            border-radius: 12px;
+        }
+        .btn-success {
+            background: #10b981;
+            border-color: #10b981;
+            font-weight: 600;
+        }
+        .btn-success:hover {
+            background: #059669;
+            border-color: #059669;
+        }
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(16, 185, 129, 0.15);
+        }
+        .table th {
+            background-color: #f0fdf4 !important;
+            color: #064e3b;
+            font-weight: 700;
+            border-bottom: 1.5px solid rgba(16, 185, 129, 0.2);
+        }
+        .badge-cash { background-color: #dcfce7; color: #15803d; }
+        .badge-upi { background-color: #e0f2fe; color: #0369a1; }
+        .badge-card { background-color: #f3e8ff; color: #7e22ce; }
+        
+        .badge-appt { background-color: #ecfdf5; color: #047857; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge-lab { background-color: #fffbeb; color: #b45309; border: 1px solid rgba(245, 158, 11, 0.2); }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top py-3 mb-4">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand fw-bold d-flex align-items-center" style="font-family: 'Outfit', sans-serif; color: #064e3b; font-size: 1.4rem;">
+                <span class="me-2" style="color: #10b981; font-size: 1.8rem;">✚</span> CareConnect Admin
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-success px-3 py-2 rounded-pill fw-semibold">👑 System Administrator</span>
+                <a href="/admin/logout" class="btn btn-outline-danger btn-sm px-3 rounded-pill fw-semibold">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <!-- Date Filters Panel -->
+        <div class="main-card">
+            <h5 class="mb-3 fw-bold" style="font-family: 'Outfit', sans-serif;">📅 Analytics Date Range</h5>
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label text-success small fw-bold">Start Date</label>
+                    <input type="date" name="start_date" class="form-control py-2 shadow-sm" value="{{ start_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-success small fw-bold">End Date</label>
+                    <input type="date" name="end_date" class="form-control py-2 shadow-sm" value="{{ end_date }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-success w-100 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                        🔍 Fetch Analytics Data
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Metric Statistics Grid -->
+        <div class="row g-4 mb-4">
+            <!-- Metric 1: Total Revenue -->
+            <div class="col-md-4">
+                <div class="metric-card shadow-sm d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="metric-label">Total Revenue</div>
+                        <div class="metric-value">₹{{ "{:,.2f}".format(total_sales) }}</div>
+                    </div>
+                    <div style="font-size: 3rem;">💸</div>
+                </div>
+            </div>
+            <!-- Metric 2: Patient Visits -->
+            <div class="col-md-4">
+                <div class="metric-card shadow-sm d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="metric-label">Total Visits (OPD)</div>
+                        <div class="metric-value">{{ visits_count }}</div>
+                    </div>
+                    <div style="font-size: 3rem;">👥</div>
+                </div>
+            </div>
+            <!-- Metric 3: Lab Tests Done -->
+            <div class="col-md-4">
+                <div class="metric-card shadow-sm d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="metric-label">Lab Tests Done</div>
+                        <div class="metric-value">{{ tests_count }}</div>
+                    </div>
+                    <div style="font-size: 3rem;">🧪</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid Layout -->
+        <div class="row g-4 mb-4">
+            <!-- Left: Department Visits Bar Chart -->
+            <div class="col-lg-8">
+                <div class="main-card h-100">
+                    <h5 class="mb-4 fw-bold" style="font-family: 'Outfit', sans-serif;">🏥 Department-wise Patient Distribution</h5>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="deptChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- Right: Payment Methods Donut Chart -->
+            <div class="col-lg-4">
+                <div class="main-card h-100">
+                    <h5 class="mb-4 fw-bold" style="font-family: 'Outfit', sans-serif;">💳 Payment Modes</h5>
+                    <div style="position: relative; height: 300px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="paymentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Transactions Table -->
+        <div class="main-card">
+            <h5 class="mb-3 fw-bold" style="font-family: 'Outfit', sans-serif;">💸 Detailed Transactions Log (Date Range)</h5>
+            {% if all_txns %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Patient Name</th>
+                                <th>Details / Service</th>
+                                <th>Payment Mode</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in all_txns %}
+                                <tr>
+                                    <td><span class="text-nowrap fw-semibold">{{ txn.txn_date }}</span></td>
+                                    <td>
+                                        {% if txn.type == 'Appointment' %}
+                                            <span class="badge badge-appt px-2.5 py-1.5 rounded-3">Consultation</span>
+                                        {% else %}
+                                            <span class="badge badge-lab px-2.5 py-1.5 rounded-3">Lab Report</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ txn.patient_name }}</strong></td>
+                                    <td><small>{{ txn.details }}</small></td>
+                                    <td>
+                                        {% if txn.payment_method == 'Cash' %}
+                                            <span class="badge badge-cash px-3 py-1.5 rounded-pill">💵 Cash</span>
+                                        {% elif txn.payment_method == 'UPI' %}
+                                            <span class="badge badge-upi px-3 py-1.5 rounded-pill">📱 UPI</span>
+                                        {% else %}
+                                            <span class="badge badge-card px-3 py-1.5 rounded-pill">💳 Card</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end fw-bold">₹{{ "{:,.2f}".format(txn.amount) }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No financial transactions recorded for this date range.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Chart Configuration Script -->
+    <script>
+        // 1. Department Chart Data & Config
+        const deptLabels = [
+            {% for d in dept_stats %}
+                "{{ d.department }}",
+            {% endfor %}
+        ];
+        const deptData = [
+            {% for d in dept_stats %}
+                {{ d.count }},
+            {% endfor %}
+        ];
+
+        const ctxDept = document.getElementById('deptChart').getContext('2d');
+        new Chart(ctxDept, {
+            type: 'bar',
+            data: {
+                labels: deptLabels.length ? deptLabels : ["No Data"],
+                datasets: [{
+                    label: 'Visits',
+                    data: deptData.length ? deptData : [0],
+                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1.5,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+
+        // 2. Payment Chart Data & Config
+        const ctxPayment = document.getElementById('paymentChart').getContext('2d');
+        new Chart(ctxPayment, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cash', 'UPI', 'Card'],
+                datasets: [{
+                    data: [
+                        {{ sales_by_method.Cash }},
+                        {{ sales_by_method.UPI }},
+                        {{ sales_by_method.Card }}
+                    ],
+                    backgroundColor: [
+                        '#10b981', // green for cash
+                        '#0ea5e9', // blue for UPI
+                        '#a855f7'  // purple for card
+                    ],
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { family: 'Plus Jakarta Sans', weight: 'bold' },
+                            color: '#064e3b'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS appointments (
     department VARCHAR(100) NOT NULL,
     doctor VARCHAR(100) NOT NULL,
     appointment_date DATE NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL DEFAULT 500.00,
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
     FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE
 );
 
@@ -73,6 +75,8 @@ CREATE TABLE IF NOT EXISTS lab_reports (
     file_data TEXT NOT NULL,
     uploaded_by VARCHAR(100),
     history_id INT,
+    amount DECIMAL(10, 2) NOT NULL DEFAULT 350.00,
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'UPI',
     FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE,
     FOREIGN KEY (history_id) REFERENCES patient_history(history_id) ON DELETE SET NULL
 );

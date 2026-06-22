@@ -1199,6 +1199,20 @@ def other_login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
+        
+        # Admin login credentials
+        if role == "admin":
+            if username == "admin" and password == "admin123":
+                session.pop("doctor_logged_in", None)
+                session.pop("lab_logged_in", None)
+                session.pop("receptionist_logged_in", None)
+                session["admin_logged_in"] = True
+                return redirect(url_for("admin_dashboard"))
+            else:
+                flash("Invalid Admin credentials", "danger")
+                return redirect(url_for("other_login", role=role))
+                
+        # Other portals placeholder authentication
         if username == "other" and password == "pass123":
             role_name = role.replace("_", " ").title()
             return f"""
@@ -1213,6 +1227,117 @@ def other_login():
         flash("Invalid username or password", "danger")
         return redirect(url_for("other_login", role=role))
     return render_template("other_login.html")
+
+# -------------------- System Admin Dashboard --------------------
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("other_login", role="admin"))
+
+    # Date range filters (default to today)
+    today_str = date.today().isoformat()
+    start_date = request.args.get("start_date", today_str)
+    end_date = request.args.get("end_date", today_str)
+
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # 1. Total Patient Visits (Appointments)
+    cur.execute("""
+        SELECT COUNT(*) as count 
+        FROM appointments 
+        WHERE appointment_date BETWEEN %s AND %s
+    """, (start_date, end_date))
+    visits_count = cur.fetchone()["count"]
+
+    # 2. Patients per Department
+    cur.execute("""
+        SELECT department, COUNT(*) as count 
+        FROM appointments 
+        WHERE appointment_date BETWEEN %s AND %s 
+        GROUP BY department
+        ORDER BY count DESC
+    """, (start_date, end_date))
+    dept_stats = cur.fetchall()
+
+    # 3. Total Lab Tests done
+    cur.execute("""
+        SELECT COUNT(*) as count 
+        FROM lab_reports 
+        WHERE report_date BETWEEN %s AND %s
+    """, (start_date, end_date))
+    tests_count = cur.fetchone()["count"]
+
+    # 4. Total Sales & Payment Methods breakdown
+    cur.execute("""
+        SELECT payment_method, SUM(amount) as total 
+        FROM appointments 
+        WHERE appointment_date BETWEEN %s AND %s 
+        GROUP BY payment_method
+    """, (start_date, end_date))
+    appt_sales = cur.fetchall()
+
+    cur.execute("""
+        SELECT payment_method, SUM(amount) as total 
+        FROM lab_reports 
+        WHERE report_date BETWEEN %s AND %s 
+        GROUP BY payment_method
+    """, (start_date, end_date))
+    lab_sales = cur.fetchall()
+
+    # Merge payments
+    sales_by_method = {"Cash": 0.0, "UPI": 0.0, "Card": 0.0}
+    for s in appt_sales:
+        method = s["payment_method"]
+        if method in sales_by_method:
+            sales_by_method[method] += float(s["total"])
+            
+    for s in lab_sales:
+        method = s["payment_method"]
+        if method in sales_by_method:
+            sales_by_method[method] += float(s["total"])
+
+    total_sales = sum(sales_by_method.values())
+
+    # 5. Detailed Transactions List
+    cur.execute("""
+        SELECT 'Appointment' as type, p.name as patient_name, a.department as details, 
+               a.amount, a.payment_method, a.appointment_date as txn_date 
+        FROM appointments a 
+        JOIN patients p ON a.aadhaar = p.aadhaar 
+        WHERE a.appointment_date BETWEEN %s AND %s
+    """, (start_date, end_date))
+    appt_txns = cur.fetchall()
+
+    cur.execute("""
+        SELECT 'Lab Test' as type, p.name as patient_name, l.report_type as details, 
+               l.amount, l.payment_method, l.report_date as txn_date 
+        FROM lab_reports l 
+        JOIN patients p ON l.aadhaar = p.aadhaar 
+        WHERE l.report_date BETWEEN %s AND %s
+    """, (start_date, end_date))
+    lab_txns = cur.fetchall()
+
+    cur.close()
+
+    # Combine and sort transactions by date descending
+    all_txns = appt_txns + lab_txns
+    all_txns.sort(key=lambda x: x["txn_date"], reverse=True)
+
+    return render_template("admin_dashboard.html",
+                           start_date=start_date,
+                           end_date=end_date,
+                           visits_count=visits_count,
+                           dept_stats=dept_stats,
+                           tests_count=tests_count,
+                           sales_by_method=sales_by_method,
+                           total_sales=total_sales,
+                           all_txns=all_txns)
+
+# -------------------- System Admin Logout --------------------
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("admin_logged_in", None)
+    return redirect(url_for("admin_login"))
 
 if __name__ == "__main__":
     app.run(debug=True)
