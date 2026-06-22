@@ -1284,7 +1284,7 @@ def admin_dashboard():
 
     # 4. Total Sales & Payment Methods breakdown
     cur.execute("""
-        SELECT payment_method, SUM(amount) as total 
+        SELECT payment_method, SUM(COALESCE(amount, 0.00)) as total 
         FROM appointments 
         WHERE appointment_date BETWEEN %s AND %s 
         GROUP BY payment_method
@@ -1292,7 +1292,7 @@ def admin_dashboard():
     appt_sales = cur.fetchall()
 
     cur.execute("""
-        SELECT payment_method, SUM(amount) as total 
+        SELECT payment_method, SUM(COALESCE(amount, 0.00)) as total 
         FROM lab_reports 
         WHERE report_date BETWEEN %s AND %s 
         GROUP BY payment_method
@@ -1304,19 +1304,21 @@ def admin_dashboard():
     for s in appt_sales:
         method = s["payment_method"]
         if method in sales_by_method:
-            sales_by_method[method] += float(s["total"])
+            total_val = s["total"]
+            sales_by_method[method] += float(total_val) if total_val is not None else 0.0
             
     for s in lab_sales:
         method = s["payment_method"]
         if method in sales_by_method:
-            sales_by_method[method] += float(s["total"])
+            total_val = s["total"]
+            sales_by_method[method] += float(total_val) if total_val is not None else 0.0
 
     total_sales = sum(sales_by_method.values())
 
     # 5. Detailed Transactions List
     cur.execute("""
         SELECT 'Appointment' as type, p.name as patient_name, a.department as details, 
-               a.amount, a.payment_method, a.appointment_date as txn_date 
+               COALESCE(a.amount, 0.00) as amount, a.payment_method, a.appointment_date as txn_date 
         FROM appointments a 
         JOIN patients p ON a.aadhaar = p.aadhaar 
         WHERE a.appointment_date BETWEEN %s AND %s
@@ -1325,7 +1327,7 @@ def admin_dashboard():
 
     cur.execute("""
         SELECT 'Lab Test' as type, p.name as patient_name, l.report_type as details, 
-               l.amount, l.payment_method, l.report_date as txn_date 
+               COALESCE(l.amount, 0.00) as amount, l.payment_method, l.report_date as txn_date 
         FROM lab_reports l 
         JOIN patients p ON l.aadhaar = p.aadhaar 
         WHERE l.report_date BETWEEN %s AND %s
