@@ -59,6 +59,31 @@ def compress_image_data(file_name, file_data, max_dim=1200, quality=60):
         print("Failed to compress image:", e)
         return file_data
 
+# -------------------- Cloudinary Configuration & Utility --------------------
+import cloudinary
+import cloudinary.uploader
+import os
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
+def upload_to_cloudinary(file_name, file_data, folder="careconnect"):
+    try:
+        # Upload binary data directly to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            BytesIO(file_data),
+            folder=folder,
+            resource_type="auto"
+        )
+        return upload_result.get("secure_url")
+    except Exception as e:
+        print("Cloudinary upload failed for", file_name, ":", e)
+        return None
+
 # -------------------- Home --------------------
 @app.route("/")
 def home():
@@ -436,7 +461,19 @@ def download_report(report_id):
     cur.close()
 
     if report:
-        return send_file(BytesIO(report[1]),
+        file_data = report[1]
+        # Check if it is a Cloudinary URL
+        if isinstance(file_data, str) and file_data.startswith("http"):
+            return redirect(file_data)
+        elif isinstance(file_data, bytes):
+            try:
+                decoded = file_data.decode("utf-8")
+                if decoded.startswith("http"):
+                    return redirect(decoded)
+            except Exception:
+                pass
+
+        return send_file(BytesIO(file_data),
                          download_name=report[0],
                          as_attachment=True)
 
@@ -452,6 +489,19 @@ def view_report(report_id):
 
     if report:
         file_name = report[0].lower()
+        file_data = report[1]
+        
+        # Check if it is a Cloudinary URL
+        if isinstance(file_data, str) and file_data.startswith("http"):
+            return redirect(file_data)
+        elif isinstance(file_data, bytes):
+            try:
+                decoded = file_data.decode("utf-8")
+                if decoded.startswith("http"):
+                    return redirect(decoded)
+            except Exception:
+                pass
+
         mimetype = "application/pdf"
         if file_name.endswith(".png"):
             mimetype = "image/png"
@@ -460,7 +510,7 @@ def view_report(report_id):
         elif file_name.endswith(".txt"):
             mimetype = "text/plain"
             
-        return send_file(BytesIO(report[1]),
+        return send_file(BytesIO(file_data),
                          mimetype=mimetype,
                          as_attachment=False)
 
@@ -942,10 +992,13 @@ def api_upload_mobile(token):
         if file.filename != "":
             file_name = file.filename
             file_data = file.read()
-            cur.execute("""
-                INSERT INTO prescription_scan_session_files (token, file_name, file_data)
-                VALUES (%s, %s, %s)
-            """, (token, file_name, file_data))
+            # Upload to Cloudinary and get URL
+            cloudinary_url = upload_to_cloudinary(file_name, file_data, folder="prescriptions")
+            if cloudinary_url:
+                cur.execute("""
+                    INSERT INTO prescription_scan_session_files (token, file_name, file_data)
+                    VALUES (%s, %s, %s)
+                """, (token, file_name, cloudinary_url))
             
     cur.execute("""
         UPDATE prescription_scan_sessions 
@@ -988,10 +1041,21 @@ def serve_prescription_raw_image(history_id):
     data = cur.fetchone()
     cur.close()
     if data and data[1]:
+        file_data = data[1]
+        # Check if it is a Cloudinary URL
+        if isinstance(file_data, str) and file_data.startswith("http"):
+            return redirect(file_data)
+        elif isinstance(file_data, bytes):
+            try:
+                decoded = file_data.decode("utf-8")
+                if decoded.startswith("http"):
+                    return redirect(decoded)
+            except Exception:
+                pass
         mimetype = "image/png"
         if data[0].lower().endswith(".jpg") or data[0].lower().endswith(".jpeg"):
             mimetype = "image/jpeg"
-        return send_file(BytesIO(data[1]), mimetype=mimetype, as_attachment=False)
+        return send_file(BytesIO(file_data), mimetype=mimetype, as_attachment=False)
     return "Prescription not found", 404
 
 @app.route("/doctor/prescription/multi_raw_image/<int:file_id>")
@@ -1001,58 +1065,76 @@ def serve_prescription_multi_raw_image(file_id):
     data = cur.fetchone()
     cur.close()
     if data and data[1]:
+        file_data = data[1]
+        # Check if it is a Cloudinary URL
+        if isinstance(file_data, str) and file_data.startswith("http"):
+            return redirect(file_data)
+        elif isinstance(file_data, bytes):
+            try:
+                decoded = file_data.decode("utf-8")
+                if decoded.startswith("http"):
+                    return redirect(decoded)
+            except Exception:
+                pass
         mimetype = "image/png"
         if data[0].lower().endswith(".jpg") or data[0].lower().endswith(".jpeg"):
             mimetype = "image/jpeg"
-        return send_file(BytesIO(data[1]), mimetype=mimetype, as_attachment=False)
+        return send_file(BytesIO(file_data), mimetype=mimetype, as_attachment=False)
     return "File not found", 404
 
 @app.route("/doctor/prescription/image/<int:history_id>")
 def serve_prescription_image(history_id):
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT id, file_name FROM patient_history_prescriptions WHERE history_id = %s", (history_id,))
+    cur.execute("SELECT id, file_name, file_data FROM patient_history_prescriptions WHERE history_id = %s", (history_id,))
     files = cur.fetchall()
+    
+    # Check if there is a single legacy image
+    cur.execute("SELECT prescription_image_name, prescription_image FROM patient_history WHERE history_id = %s", (history_id,))
+    legacy_data = cur.fetchone()
     cur.close()
     
     if not files:
-        # Fallback to single legacy image
-        return f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                html, body {{
-                    margin: 0;
-                    padding: 0;
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background-color: #0f172a;
-                    overflow: hidden;
-                }}
-                img {{
-                    max-width: 95%;
-                    max-height: 95%;
-                    object-fit: contain;
-                    border-radius: 12px;
-                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                }}
-            </style>
-        </head>
-        <body>
-            <img src="/doctor/prescription/raw_image/{history_id}" alt="Prescription Receipt">
-        </body>
-        </html>
-        """
+        if legacy_data and legacy_data["prescription_image"]:
+            img_src = legacy_data["prescription_image"] if legacy_data["prescription_image"].startswith("http") else f"/doctor/prescription/raw_image/{history_id}"
+            return f"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    html, body {{
+                        margin: 0;
+                        padding: 0;
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background-color: #0f172a;
+                        overflow: hidden;
+                    }}
+                    img {{
+                        max-width: 95%;
+                        max-height: 95%;
+                        object-fit: contain;
+                        border-radius: 12px;
+                        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                    }}
+                </style>
+            </head>
+            <body>
+                <img src="{img_src}" alt="Prescription Receipt">
+            </body>
+            </html>
+            """
+        return "Prescription not found", 404
         
     # Render multiple images in a vertically scrollable container
     img_tags = ""
     for f in files:
-        img_tags += f'<div class="img-wrapper"><img src="/doctor/prescription/multi_raw_image/{f["id"]}" alt="{f["file_name"]}"></div>\n'
+        img_src = f["file_data"] if f["file_data"].startswith("http") else f"/doctor/prescription/multi_raw_image/{f['id']}"
+        img_tags += f'<div class="img-wrapper"><img src="{img_src}" alt="{f["file_name"]}"></div>\n'
         
     return f"""
     <!DOCTYPE html>

@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS patient_history (
     doctor_name VARCHAR(100),
     locked_by VARCHAR(100) DEFAULT NULL,
     locked_at DATETIME DEFAULT NULL,
-    prescription_image LONGBLOB DEFAULT NULL,
+    prescription_image TEXT DEFAULT NULL,
     prescription_image_name VARCHAR(255) DEFAULT NULL,
     FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE
 );
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS prescription_scan_sessions (
     token VARCHAR(100) PRIMARY KEY,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     file_name VARCHAR(255) DEFAULT NULL,
-    file_data LONGBLOB DEFAULT NULL,
+    file_data TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS lab_reports (
     report_date DATE NOT NULL,
     report_type VARCHAR(100) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
-    file_data LONGBLOB NOT NULL,
+    file_data TEXT NOT NULL,
     uploaded_by VARCHAR(100),
     history_id INT,
     FOREIGN KEY (aadhaar) REFERENCES patients(aadhaar) ON DELETE CASCADE,
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS prescription_scan_session_files (
     id INT AUTO_INCREMENT PRIMARY KEY,
     token VARCHAR(100) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
-    file_data LONGBLOB NOT NULL,
+    file_data TEXT NOT NULL,
     FOREIGN KEY (token) REFERENCES prescription_scan_sessions(token) ON DELETE CASCADE
 );
 
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS patient_history_prescriptions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     history_id INT NOT NULL,
     file_name VARCHAR(255) NOT NULL,
-    file_data LONGBLOB NOT NULL,
+    file_data TEXT NOT NULL,
     FOREIGN KEY (history_id) REFERENCES patient_history(history_id) ON DELETE CASCADE
 );
 
