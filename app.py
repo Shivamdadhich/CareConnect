@@ -803,14 +803,23 @@ def api_lab_upload_report():
         return {"error": "No file uploaded"}, 400
 
     file_name = file.filename
-    file_data = compress_image_data(file_name, file.read())
+    file_bytes = file.read()
+    
+    # Compress if it's an image
+    compressed_bytes = compress_image_data(file_name, file_bytes)
+    
+    # Upload to Cloudinary
+    cloudinary_url = upload_to_cloudinary(file_name, compressed_bytes, folder="lab_reports")
+    if not cloudinary_url:
+        return {"error": "Failed to upload report to Cloudinary storage"}, 500
+
     h_id = int(history_id) if history_id else None
 
     cur = mysql.connection.cursor()
     cur.execute("""
         INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, h_id))
+    """, (aadhaar, report_date, report_type, file_name, cloudinary_url, uploaded_by, h_id))
     
     # Release lock on successful upload
     if h_id:
