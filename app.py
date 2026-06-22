@@ -840,6 +840,16 @@ def api_search_tests():
         })
     return {"tests": tests_list}
 
+@app.route("/api/all_tests")
+def api_all_tests():
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT test_name, price FROM lab_test_catalog")
+    rows = cur.fetchall()
+    cur.close()
+    
+    tests_list = [{"name": r["test_name"], "price": float(r["price"])} for r in rows]
+    return {"tests": tests_list}
+
 @app.route("/api/lab/pending_tests")
 def api_lab_pending_tests():
     if not session.get("lab_logged_in"):

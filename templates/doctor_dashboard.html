@@ -284,7 +284,17 @@ const suggestionsList = document.getElementById('suggestionsList');
 const selectedContainer = document.getElementById('selectedTestsContainer');
 const testsHiddenInput = document.getElementById('testsHiddenInput');
 let activeIndex = -1;
-let debounceTimer;
+
+// Pre-load and cache the entire test catalog on page load
+let allTests = [];
+fetch('/api/all_tests')
+    .then(res => res.json())
+    .then(data => {
+        allTests = data.tests || [];
+    })
+    .catch(err => {
+        console.error("Error pre-loading test catalog:", err);
+    });
 
 if (searchInput) {
     searchInput.addEventListener('input', function() {
@@ -292,44 +302,48 @@ if (searchInput) {
         suggestionsList.innerHTML = '';
         activeIndex = -1;
         
-        clearTimeout(debounceTimer);
         if (!query) {
             suggestionsList.style.display = 'none';
             return;
         }
 
-        debounceTimer = setTimeout(() => {
-            fetch(`/api/search_tests?query=${encodeURIComponent(query)}`)
-                .then(res => res.json())
-                .then(data => {
-                    suggestionsList.innerHTML = '';
-                    const matches = data.tests || [];
-                    if (matches.length > 0) {
-                        matches.forEach((match, idx) => {
-                            const item = document.createElement('button');
-                            item.type = 'button';
-                            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-dark';
-                            item.innerHTML = `<div>${match.test_name} <span class="text-muted ms-2" style="font-size:0.75rem;">(₹${match.price})</span></div> <span class="badge bg-success rounded-pill">+</span>`;
-                            item.onclick = function() { addTest(match.test_name); };
-                            item.setAttribute('data-index', idx);
-                            suggestionsList.appendChild(item);
-                        });
-                        suggestionsList.style.display = 'block';
-                    } else {
-                        const item = document.createElement('button');
-                        item.type = 'button';
-                        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-primary';
-                        item.innerHTML = `Add custom test: "${searchInput.value}" <span class="badge bg-primary rounded-pill">+</span>`;
-                        item.onclick = function() { addTest(searchInput.value.trim()); };
-                        item.setAttribute('data-index', 0);
-                        suggestionsList.appendChild(item);
-                        suggestionsList.style.display = 'block';
-                    }
-                })
-                .catch(err => {
-                    console.error("Error fetching tests:", err);
-                });
-        }, 150);
+        // Perform instant client-side matching (including acronym checks)
+        const matches = allTests.filter(test => {
+            const name = test.name.toLowerCase();
+            
+            // 1. Direct name match
+            if (name.includes(query)) return true;
+            
+            // 2. Acronym match (e.g. Complete Blood Count -> cbc)
+            const words = name.split(/[^a-z0-9]+/);
+            const acronym = words.filter(w => w.length > 0).map(w => w[0]).join("");
+            if (acronym.includes(query)) return true;
+            
+            return false;
+        });
+
+        if (matches.length > 0) {
+            // Limit suggestions to first 12 matches for cleanliness and speed
+            matches.slice(0, 12).forEach((match, idx) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-dark';
+                item.innerHTML = `<div>${match.name}</div> <span class="badge bg-success rounded-pill">+</span>`;
+                item.onclick = function() { addTest(match.name); };
+                item.setAttribute('data-index', idx);
+                suggestionsList.appendChild(item);
+            });
+            suggestionsList.style.display = 'block';
+        } else {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center text-primary';
+            item.innerHTML = `Add custom test: "${searchInput.value}" <span class="badge bg-primary rounded-pill">+</span>`;
+            item.onclick = function() { addTest(searchInput.value.trim()); };
+            item.setAttribute('data-index', 0);
+            suggestionsList.appendChild(item);
+            suggestionsList.style.display = 'block';
+        }
     });
 
     searchInput.addEventListener('keydown', function(e) {
