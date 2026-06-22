@@ -216,7 +216,7 @@
             
             let targetWidth = video.videoWidth;
             let targetHeight = video.videoHeight;
-            const maxDim = 1200;
+            const maxDim = 1000;
             
             // Downscale image if it exceeds max dimension
             if (targetWidth > maxDim || targetHeight > maxDim) {
@@ -239,7 +239,7 @@
             canvas.toBlob((blob) => {
                 capturedBlobs.push(blob);
                 renderThumbnails();
-            }, 'image/jpeg', 0.60);
+            }, 'image/jpeg', 0.50);
         }
 
         function removeImage(index) {

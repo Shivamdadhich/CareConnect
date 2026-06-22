@@ -10,16 +10,18 @@ sys.modules['MySQLdb.cursors'] = pymysql.cursors
 
 load_dotenv()
 
+import threading
+
 class MySQLWrapper:
     def __init__(self, app=None):
         self.app = app
-        self._conn = None
+        self._local = threading.local()
 
     def _create_connection(self):
         host = os.getenv("DB_HOST", "localhost")
         user = os.getenv("DB_USER", "root")
         password = os.getenv("DB_PASS", "")
-        database = os.getenv("DB_NAME", "patient_details")
+        database = os.getenv("DB_NAME", "careconnect") # Ensure correct db name
         port = int(os.getenv("DB_PORT", 3306))
         
         # Setup SSL if specified (recommended/required for cloud DBs)
@@ -38,17 +40,17 @@ class MySQLWrapper:
 
     @property
     def connection(self):
-        # Reuse a global/instance-level connection to leverage serverless warm container reuse.
-        # This completely avoids reconnecting on every request when the container is warm.
-        if self._conn is None or not self._conn.open:
-            self._conn = self._create_connection()
+        # Use thread-local storage to prevent connection sharing between concurrent requests/threads.
+        # This completely resolves pymysql socket corruption / hanging issues.
+        if not hasattr(self._local, "conn") or self._local.conn is None or not self._local.conn.open:
+            self._local.conn = self._create_connection()
         else:
             try:
-                # Ping the connection and reconnect if it went away
-                self._conn.ping(reconnect=True)
+                # Ping and reconnect if the connection died
+                self._local.conn.ping(reconnect=True)
             except Exception:
-                self._conn = self._create_connection()
-        return self._conn
+                self._local.conn = self._create_connection()
+        return self._local.conn
 
 mysql_instance = None
 
