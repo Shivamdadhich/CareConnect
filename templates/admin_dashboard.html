@@ -188,7 +188,7 @@
             <div class="col-lg-8">
                 <div class="main-card h-100">
                     <h6 class="mb-3 fw-bold text-secondary" style="font-family: 'Outfit', sans-serif;">🏥 Department-wise Patient Distribution (Includes 0 Visits)</h6>
-                    <div class="chart-container" style="height: 280px;">
+                    <div class="chart-container" style="height: 380px;">
                         <canvas id="deptChart"></canvas>
                     </div>
                 </div>
@@ -303,21 +303,20 @@
                 }]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false }
                 },
                 scales: {
-                    x: {
+                    y: {
                         ticks: {
-                            font: { size: 9 },
-                            maxRotation: 45,
-                            minRotation: 45
+                            font: { size: 9 }
                         },
                         grid: { display: false }
                     },
-                    y: {
+                    x: {
                         beginAtZero: true,
                         ticks: { 
                             font: { size: 9 },
