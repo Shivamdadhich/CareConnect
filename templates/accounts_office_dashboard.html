@@ -284,7 +284,7 @@
                                             <div class="col-md-3">
                                                 <div class="input-group">
                                                     <span class="input-group-text bg-light border-end-0 text-muted" style="font-size: 0.8rem;">₹</span>
-                                                    <input type="number" name="amount" class="form-control border-start-0 text-end fw-semibold" value="350" min="0" step="50" required style="font-size: 0.85rem;">
+                                                    <input type="number" name="amount" class="form-control border-start-0 text-end fw-semibold" value="{{ '{:.0f}'.format(test.price) if test.price else 350 }}" min="0" step="50" required style="font-size: 0.85rem;">
                                                 </div>
                                             </div>
                                             <div class="col-md-2">

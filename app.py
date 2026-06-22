@@ -815,6 +815,31 @@ def api_lab_upload_report():
 
     return {"success": True, "message": f"Successfully uploaded {report_type}!"}
 
+@app.route("/api/search_tests")
+def api_search_tests():
+    query = request.args.get("query", "").strip()
+    if not query:
+        return {"tests": []}
+    
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("""
+        SELECT test_name, price 
+        FROM lab_test_catalog 
+        WHERE test_name LIKE %s 
+        LIMIT 10
+    """, (f"%{query}%",))
+    rows = cur.fetchall()
+    cur.close()
+    
+    # Format decimal to float for JSON compatibility
+    tests_list = []
+    for r in rows:
+        tests_list.append({
+            "test_name": r["test_name"],
+            "price": float(r["price"])
+        })
+    return {"tests": tests_list}
+
 @app.route("/api/lab/pending_tests")
 def api_lab_pending_tests():
     if not session.get("lab_logged_in"):
@@ -1407,15 +1432,23 @@ def accounts_office_dashboard():
             billed_set = set()
             for r in billed_reports:
                 billed_set.add((r["history_id"], r["report_type"].lower().strip()))
+
+            # Fetch catalog prices for fast lookups
+            cur.execute("SELECT test_name, price FROM lab_test_catalog")
+            catalog_rows = cur.fetchall()
+            price_map = {row["test_name"].lower().strip(): float(row["price"]) for row in catalog_rows}
                 
             for h in history_records:
                 h_id = h["history_id"]
                 advised = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
                 for test_name in advised:
                     if (h_id, test_name.lower()) not in billed_set:
+                        # Default to 350.00 if test name not matched in DB catalog
+                        matched_price = price_map.get(test_name.lower().strip(), 350.00)
                         pending_tests.append({
                             "history_id": h_id,
                             "test_name": test_name,
+                            "price": matched_price,
                             "visit_date": h["visit_date"].strftime("%Y-%m-%d"),
                             "doctor_name": h["doctor_name"]
                         })
