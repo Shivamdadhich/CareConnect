@@ -13,6 +13,9 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = "supersecretkey"
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+
+def get_ist_now():
+    return datetime.utcnow() + timedelta(hours=5, minutes=30)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -218,7 +221,7 @@ def make_appointment():
                                amount=f"{float(amount):,.2f}")
 
     aadhaar = request.args.get("aadhaar")
-    min_date = date.today().isoformat()
+    min_date = get_ist_now().date().isoformat()
 
     # Fetch active doctors from database
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -414,7 +417,7 @@ def save_history():
     prescription = request.form.get("prescription")
     tests = request.form.get("tests")
     scan_token = request.form.get("scan_token")
-    visit_date = datetime.today().strftime("%Y-%m-%d")
+    visit_date = get_ist_now().strftime("%Y-%m-%d")
 
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     doctor_name = session.get("doctor_name")
@@ -675,7 +678,7 @@ def lab_dashboard():
         if len(pending_tests) >= 20:
             break
 
-    today_date = date.today().strftime("%Y-%m-%d")
+    today_date = get_ist_now().strftime("%Y-%m-%d")
     return render_template("lab_dashboard.html",
                            patient=patient,
                            history=history,
@@ -1238,7 +1241,7 @@ def admin_dashboard():
         return redirect(url_for("other_login", role="admin"))
 
     # Date range filters (default to today)
-    today_str = date.today().isoformat()
+    today_str = get_ist_now().date().isoformat()
     start_date = request.args.get("start_date", today_str)
     end_date = request.args.get("end_date", today_str)
 
@@ -1340,7 +1343,7 @@ def admin_dashboard():
     cur.close()
 
     # Combine and sort transactions by date descending
-    all_txns = appt_txns + lab_txns
+    all_txns = list(appt_txns) + list(lab_txns)
     all_txns.sort(key=lambda x: x["txn_date"], reverse=True)
 
     return render_template("admin_dashboard.html",
@@ -1359,7 +1362,7 @@ def accounts_office_dashboard():
     if not session.get("accounts_office_logged_in"):
         return redirect(url_for("other_login", role="accounts_office"))
 
-    today_str = date.today().isoformat()
+    today_str = get_ist_now().date().isoformat()
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     # 1. Total collections today by Cash, UPI, Card
@@ -1482,7 +1485,7 @@ def collect_payment_bulk():
     aadhaar = request.form.get("aadhaar")
     selected_indices = request.form.getlist("selected_index")
     payment_method = request.form.get("payment_method", "UPI")
-    today_str = date.today().isoformat()
+    today_str = get_ist_now().date().isoformat()
 
     if not selected_indices:
         flash("No tests selected for payment collection.", "warning")
