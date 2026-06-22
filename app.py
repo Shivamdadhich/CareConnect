@@ -825,7 +825,7 @@ def api_search_tests():
     cur.execute("""
         SELECT test_name, price 
         FROM lab_test_catalog 
-        WHERE test_name LIKE %s 
+        WHERE LOWER(test_name) LIKE LOWER(%s) 
         LIMIT 10
     """, (f"%{query}%",))
     rows = cur.fetchall()
