@@ -1255,9 +1255,24 @@ def admin_dashboard():
         FROM appointments 
         WHERE appointment_date BETWEEN %s AND %s 
         GROUP BY department
-        ORDER BY count DESC
     """, (start_date, end_date))
-    dept_stats = cur.fetchall()
+    queried_dept_stats = cur.fetchall()
+
+    departments_list = [
+        "General Medicine", "Cardiology", "Neurology", "Orthopedics",
+        "Dermatology", "Pediatrics", "Gynecology & Obstetrics", "ENT",
+        "Ophthalmology", "Psychiatry", "Pulmonology", "Gastroenterology",
+        "Urology", "General Surgery", "Dentistry", "Physician"
+    ]
+    dept_map = {dept: 0 for dept in departments_list}
+    for item in queried_dept_stats:
+        dept_name = item["department"]
+        if dept_name in dept_map:
+            dept_map[dept_name] = item["count"]
+        else:
+            dept_map[dept_name] = item["count"] # Keep custom departments if any
+            
+    dept_stats = [{"department": k, "count": v} for k, v in dept_map.items()]
 
     # 3. Total Lab Tests done
     cur.execute("""
