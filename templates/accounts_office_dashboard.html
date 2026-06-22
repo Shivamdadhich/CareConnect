@@ -263,44 +263,67 @@
 
                     <!-- Advised Lab Tests Billing List -->
                     <div class="glass-card">
-                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2 text-success" style="font-family: 'Outfit', sans-serif;">
-                            <span>🔬</span> Advised Investigations & Payment Collections
-                        </h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2 text-success" style="font-family: 'Outfit', sans-serif;">
+                                <span>🔬</span> Advised Investigations & Payment Collections
+                            </h5>
+                            {% if pending_tests %}
+                                <div class="form-check mb-0">
+                                    <input type="checkbox" id="selectAllCheckbox" class="form-check-input" checked style="transform: scale(1.1);">
+                                    <label class="form-check-label small text-muted fw-bold ms-1" for="selectAllCheckbox" style="cursor: pointer;">Select All</label>
+                                </div>
+                            {% endif %}
+                        </div>
+
                         {% if pending_tests %}
-                            {% for test in pending_tests %}
-                                <div class="billing-item-row">
-                                    <form method="POST" action="/accounts_office/collect_payment">
-                                        <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
-                                        <input type="hidden" name="history_id" value="{{ test.history_id }}">
-                                        <input type="hidden" name="test_name" value="{{ test.test_name }}">
+                            <form id="bulkBillingForm" method="POST" action="/accounts_office/collect_payment_bulk">
+                                <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                                
+                                {% for test in pending_tests %}
+                                    <div class="billing-item-row">
+                                        <input type="hidden" name="history_id_{{ loop.index0 }}" value="{{ test.history_id }}">
+                                        <input type="hidden" name="test_name_{{ loop.index0 }}" value="{{ test.test_name }}">
                                         
                                         <div class="row align-items-center g-3">
-                                            <div class="col-md-5">
+                                            <div class="col-md-1 col-2 text-center">
+                                                <input type="checkbox" name="selected_index" value="{{ loop.index0 }}" class="form-check-input test-item-checkbox" checked style="transform: scale(1.25); cursor: pointer;">
+                                            </div>
+                                            <div class="col-md-7 col-10">
                                                 <div class="fw-bold text-dark" style="font-size: 0.95rem;">{{ test.test_name }}</div>
                                                 <div class="text-muted small mt-1" style="font-size: 0.75rem;">
                                                     Advised by <strong>{{ test.doctor_name }}</strong> on {{ test.visit_date }}
                                                 </div>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-4 col-12">
                                                 <div class="input-group">
                                                     <span class="input-group-text bg-light border-end-0 text-muted" style="font-size: 0.8rem;">₹</span>
-                                                    <input type="number" name="amount" class="form-control border-start-0 text-end fw-semibold" value="{{ '{:.0f}'.format(test.price) if test.price else 350 }}" min="0" step="50" required style="font-size: 0.85rem;">
+                                                    <input type="number" name="amount_{{ loop.index0 }}" class="form-control border-start-0 text-end fw-semibold test-price-input" value="{{ '{:.0f}'.format(test.price) if test.price else 350 }}" min="0" step="any" required style="font-size: 0.85rem;">
                                                 </div>
                                             </div>
-                                            <div class="col-md-2">
-                                                <select name="payment_method" class="form-select text-center fw-semibold" required style="font-size: 0.8rem;">
-                                                    <option value="UPI" selected>UPI</option>
-                                                    <option value="Cash">Cash</option>
-                                                    <option value="Card">Card</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <button type="submit" class="btn btn-success w-100 py-2 fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Collect</button>
-                                            </div>
                                         </div>
-                                    </form>
+                                    </div>
+                                {% endfor %}
+
+                                <!-- Bulk Checkout Summary Action Bar -->
+                                <div class="p-3 mt-4 border-top border-light-subtle d-flex justify-content-between align-items-center flex-wrap gap-3" style="background-color: #fafdfb; border-radius: 12px;">
+                                    <div>
+                                        <span class="text-muted small fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">TOTAL SELECTED</span>
+                                        <h4 class="text-success fw-bold mt-1 mb-0" id="totalPaymentDisplay" style="font-family: 'Outfit', sans-serif;">₹0.00</h4>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div>
+                                            <select name="payment_method" class="form-select fw-semibold" required style="font-size: 0.85rem; min-width: 110px; height: 38px;">
+                                                <option value="UPI" selected>UPI</option>
+                                                <option value="Cash">Cash</option>
+                                                <option value="Card">Card</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-success px-4 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px; height: 38px;">
+                                            Collect Selected
+                                        </button>
+                                    </div>
                                 </div>
-                            {% endfor %}
+                            </form>
                         {% else %}
                             <div class="text-center py-5">
                                 <span style="font-size: 2.5rem; display: block; filter: grayscale(0.2);" class="mb-2">✅</span>
@@ -428,6 +451,51 @@
             </div>
         </div>
     </div>
+
+    <!-- Dynamic Total Calculator Script -->
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const checkboxes = document.querySelectorAll(".test-item-checkbox");
+        const priceInputs = document.querySelectorAll(".test-price-input");
+        const totalDisplay = document.getElementById("totalPaymentDisplay");
+        const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+
+        function calculateTotal() {
+            let total = 0;
+            checkboxes.forEach((cb) => {
+                if (cb.checked) {
+                    const idx = cb.value;
+                    const priceInput = document.querySelector(`input[name="amount_${idx}"]`);
+                    if (priceInput) {
+                        total += parseFloat(priceInput.value) || 0;
+                    }
+                }
+            });
+            if (totalDisplay) {
+                totalDisplay.innerText = "₹" + total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        }
+
+        checkboxes.forEach((cb) => {
+            cb.addEventListener("change", calculateTotal);
+        });
+
+        priceInputs.forEach((input) => {
+            input.addEventListener("input", calculateTotal);
+        });
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener("change", function() {
+                checkboxes.forEach((cb) => {
+                    cb.checked = selectAllCheckbox.checked;
+                });
+                calculateTotal();
+            });
+        }
+
+        calculateTotal();
+    });
+    </script>
 
     <!-- Bootstrap Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

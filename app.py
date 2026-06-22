@@ -1463,31 +1463,42 @@ def accounts_office_dashboard():
                            pending_tests=pending_tests,
                            search_aadhaar=search_aadhaar)
 
-# -------------------- Collect Payment & Authorize Lab Test --------------------
-@app.route("/accounts_office/collect_payment", methods=["POST"])
-def collect_payment():
+# -------------------- Collect Payment & Authorize Lab Test (Bulk) --------------------
+@app.route("/accounts_office/collect_payment_bulk", methods=["POST"])
+def collect_payment_bulk():
     if not session.get("accounts_office_logged_in"):
         return {"error": "Unauthorized"}, 401
 
     aadhaar = request.form.get("aadhaar")
-    history_id = request.form.get("history_id")
-    test_name = request.form.get("test_name")
-    amount = request.form.get("amount", "350.00")
+    selected_indices = request.form.getlist("selected_index")
     payment_method = request.form.get("payment_method", "UPI")
     today_str = date.today().isoformat()
 
+    if not selected_indices:
+        flash("No tests selected for payment collection.", "warning")
+        return redirect(url_for("accounts_office_dashboard", search_aadhaar=aadhaar))
+
     cur = mysql.connection.cursor()
-    
-    # Insert placeholder entry into lab_reports indicating paid but pending file upload
-    cur.execute("""
-        INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id, amount, payment_method)
-        VALUES (%s, %s, %s, 'Pending Upload', 'Pending Upload', 'Accounts Office', %s, %s, %s)
-    """, (aadhaar, today_str, test_name, int(history_id), amount, payment_method))
-    
+    processed_count = 0
+    total_amount = 0.0
+
+    for idx in selected_indices:
+        history_id = request.form.get(f"history_id_{idx}")
+        test_name = request.form.get(f"test_name_{idx}")
+        amount = request.form.get(f"amount_{idx}", "350.00")
+        
+        if test_name and history_id:
+            cur.execute("""
+                INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id, amount, payment_method)
+                VALUES (%s, %s, %s, 'Pending Upload', 'Pending Upload', 'Accounts Office', %s, %s, %s)
+            """, (aadhaar, today_str, test_name, int(history_id), float(amount), payment_method))
+            processed_count += 1
+            total_amount += float(amount)
+
     mysql.connection.commit()
     cur.close()
 
-    flash(f"Payment of ₹{float(amount):,.2f} for {test_name} processed successfully! Lab test authorized.", "success")
+    flash(f"Successfully processed payment of ₹{total_amount:,.2f} for {processed_count} test(s) via {payment_method}! Lab tests authorized.", "success")
     return redirect(url_for("accounts_office_dashboard", search_aadhaar=aadhaar))
 
 # -------------------- Accounts Office Logout --------------------
