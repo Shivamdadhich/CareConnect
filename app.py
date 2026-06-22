@@ -1193,15 +1193,25 @@ def serve_prescription_image(history_id):
     </html>
     """
 
-# -------------------- Other Staff Login --------------------
 @app.route("/other/login", methods=["GET", "POST"])
 def other_login():
+    role = request.args.get("role", "staff")
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
         if username == "other" and password == "pass123":
-            return "<h3>Welcome Staff! (Dashboard coming soon)</h3>"
-        return "<h3>Invalid credentials. <a href='/other/login'>Try again</a></h3>"
+            role_name = role.replace("_", " ").title()
+            return f"""
+                <div style='text-align: center; font-family: sans-serif; padding-top: 100px; color: #064e3b; background: #f0fdf4; min-height: 100vh; margin: 0;'>
+                    <span style='font-size: 4rem;'>🔓</span>
+                    <h2 style='font-size: 2.2rem;'>Welcome to the {role_name} Portal!</h2>
+                    <p style='color: #047857;'>The specialized dashboard is coming soon. Stay tuned!</p>
+                    <br>
+                    <a href='/admin/login' style='color: #10b981; font-weight: bold; text-decoration: none;'>&larr; Back to Gateways</a>
+                </div>
+            """
+        flash("Invalid username or password", "danger")
+        return redirect(url_for("other_login", role=role))
     return render_template("other_login.html")
 
 if __name__ == "__main__":
