@@ -23,12 +23,12 @@ def make_session_permanent():
 
 mysql = get_connection(app)
 
-# @app.teardown_appcontext
-# def close_db(error):
-#     from flask import g
-#     db_conn = g.pop('db_conn', None)
-#     if db_conn is not None and db_conn.open:
-#         db_conn.close()
+@app.teardown_appcontext
+def close_db(error):
+    from flask import g
+    db_conn = g.pop('db_conn', None)
+    if db_conn is not None and db_conn.open:
+        db_conn.close()
 
 # -------------------- Image Compression Utility --------------------
 from PIL import Image

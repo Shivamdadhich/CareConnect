@@ -10,12 +10,10 @@ sys.modules['MySQLdb.cursors'] = pymysql.cursors
 
 load_dotenv()
 
-import threading
-
 class MySQLWrapper:
     def __init__(self, app=None):
         self.app = app
-        self._local = threading.local()
+        self._conn = None
 
     def _create_connection(self):
         host = os.getenv("DB_HOST", "localhost")
@@ -40,17 +38,17 @@ class MySQLWrapper:
 
     @property
     def connection(self):
-        # Use thread-local storage to prevent connection sharing between concurrent requests/threads.
-        # This completely resolves pymysql socket corruption / hanging issues.
-        if not hasattr(self._local, "conn") or self._local.conn is None or not self._local.conn.open:
-            self._local.conn = self._create_connection()
+        from flask import has_request_context, g
+        if has_request_context():
+            # Store connection inside the request context 'g' to prevent thread-safety issues during parallel requests
+            if 'db_conn' not in g or not g.db_conn.open:
+                g.db_conn = self._create_connection()
+            return g.db_conn
         else:
-            try:
-                # Ping and reconnect if the connection died
-                self._local.conn.ping(reconnect=True)
-            except Exception:
-                self._local.conn = self._create_connection()
-        return self._local.conn
+            # Fallback for CLI/scripts
+            if self._conn is None or not self._conn.open:
+                self._conn = self._create_connection()
+            return self._conn
 
 mysql_instance = None
 
