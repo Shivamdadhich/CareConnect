@@ -189,7 +189,8 @@ def make_appointment():
         aadhaar = request.form.get("aadhaar")
         department = request.form.get("department")
         doctor = request.form.get("doctor")
-        appointment_date = request.form.get("date")
+        amount = request.form.get("amount", "500.00")
+        payment_method = request.form.get("payment_method", "Cash")
 
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute("SELECT name, age, gender FROM patients WHERE aadhaar = %s", (aadhaar,))
@@ -199,9 +200,9 @@ def make_appointment():
             return f"Error: No patient found with Aadhaar {aadhaar}"
 
         cursor.execute("""
-            INSERT INTO appointments (aadhaar, department, doctor, appointment_date)
-            VALUES (%s, %s, %s, %s)
-        """, (aadhaar, department, doctor, appointment_date))
+            INSERT INTO appointments (aadhaar, department, doctor, appointment_date, amount, payment_method)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (aadhaar, department, doctor, appointment_date, amount, payment_method))
         mysql.connection.commit()
         cursor.close()
 
@@ -214,7 +215,7 @@ def make_appointment():
                                doctor=doctor,
                                appointment_date=appointment_date,
                                valid_upto=(datetime.strptime(appointment_date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S'),
-                               amount="0.00")
+                               amount=f"{float(amount):,.2f}")
 
     aadhaar = request.args.get("aadhaar")
     min_date = date.today().isoformat()
@@ -815,11 +816,28 @@ def api_lab_upload_report():
 
     h_id = int(history_id) if history_id else None
 
-    cur = mysql.connection.cursor()
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    
+    # Check if a paid pending upload row exists
     cur.execute("""
-        INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (aadhaar, report_date, report_type, file_name, cloudinary_url, uploaded_by, h_id))
+        SELECT id FROM lab_reports 
+        WHERE history_id = %s AND report_type = %s AND file_name = 'Pending Upload'
+    """, (h_id, report_type))
+    pending_row = cur.fetchone()
+    
+    if pending_row:
+        # Update the existing row with the file details
+        cur.execute("""
+            UPDATE lab_reports 
+            SET file_name = %s, file_data = %s, report_date = %s, uploaded_by = %s
+            WHERE id = %s
+        """, (file_name, cloudinary_url, report_date, uploaded_by, pending_row["id"]))
+    else:
+        # Insert a new lab report row (standard route)
+        cur.execute("""
+            INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (aadhaar, report_date, report_type, file_name, cloudinary_url, uploaded_by, h_id))
     
     # Release lock on successful upload
     if h_id:
@@ -843,7 +861,7 @@ def api_lab_pending_tests():
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     # 1. Fetch all uploaded reports to filter pending lists
-    cur.execute("SELECT id, aadhaar, report_type, report_date, history_id FROM lab_reports")
+    cur.execute("SELECT id, aadhaar, report_type, report_date, history_id, file_name FROM lab_reports")
     all_uploaded = cur.fetchall()
     
     uploaded_by_aadhaar = {}
@@ -904,10 +922,10 @@ def api_lab_pending_tests():
         for test_name in advised_parts:
             is_uploaded = False
             for r in uploaded:
-                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower():
+                if r["history_id"] == h_id and r["report_type"].lower().strip() == test_name.lower() and r["file_name"] != 'Pending Upload':
                     is_uploaded = True
                     break
-                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date:
+                if r["history_id"] is None and r["report_type"].lower().strip() == test_name.lower() and r["report_date"] >= h_date and r["file_name"] != 'Pending Upload':
                     is_uploaded = True
                     break
             if not is_uploaded:
@@ -1212,6 +1230,19 @@ def other_login():
                 flash("Invalid Admin credentials", "danger")
                 return redirect(url_for("other_login", role=role))
                 
+        # Accounts Office login credentials
+        if role == "accounts_office":
+            if username == "accounts" and password == "pass123":
+                session.pop("doctor_logged_in", None)
+                session.pop("lab_logged_in", None)
+                session.pop("receptionist_logged_in", None)
+                session.pop("admin_logged_in", None)
+                session["accounts_office_logged_in"] = True
+                return redirect(url_for("accounts_office_dashboard"))
+            else:
+                flash("Invalid Accounts credentials", "danger")
+                return redirect(url_for("other_login", role=role))
+                
         # Other portals placeholder authentication
         if username == "other" and password == "pass123":
             role_name = role.replace("_", " ").title()
@@ -1350,10 +1381,149 @@ def admin_dashboard():
                            total_sales=total_sales,
                            all_txns=all_txns)
 
-# -------------------- System Admin Logout --------------------
-@app.route("/admin/logout")
-def admin_logout():
-    session.pop("admin_logged_in", None)
+# -------------------- Accounts Office Dashboard --------------------
+@app.route("/accounts_office/dashboard")
+def accounts_office_dashboard():
+    if not session.get("accounts_office_logged_in"):
+        return redirect(url_for("other_login", role="accounts_office"))
+
+    today_str = date.today().isoformat()
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # 1. Total collections today by Cash, UPI, Card
+    cur.execute("""
+        SELECT payment_method, SUM(COALESCE(amount, 0.00)) as total 
+        FROM appointments 
+        WHERE appointment_date = %s 
+        GROUP BY payment_method
+    """, (today_str,))
+    appt_sales = cur.fetchall()
+
+    cur.execute("""
+        SELECT payment_method, SUM(COALESCE(amount, 0.00)) as total 
+        FROM lab_reports 
+        WHERE report_date = %s 
+        GROUP BY payment_method
+    """, (today_str,))
+    lab_sales = cur.fetchall()
+
+    sales_by_method = {"Cash": 0.0, "UPI": 0.0, "Card": 0.0}
+    for s in appt_sales:
+        method = s["payment_method"]
+        if method in sales_by_method:
+            total_val = s["total"]
+            sales_by_method[method] += float(total_val) if total_val is not None else 0.0
+            
+    for s in lab_sales:
+        method = s["payment_method"]
+        if method in sales_by_method:
+            total_val = s["total"]
+            sales_by_method[method] += float(total_val) if total_val is not None else 0.0
+
+    today_total = sum(sales_by_method.values())
+
+    # 2. Detailed transactions log for today
+    cur.execute("""
+        SELECT 'Appointment' as type, p.name as patient_name, a.department as details, 
+               COALESCE(a.amount, 0.00) as amount, a.payment_method, a.appointment_date as txn_date 
+        FROM appointments a 
+        JOIN patients p ON a.aadhaar = p.aadhaar 
+        WHERE a.appointment_date = %s
+    """, (today_str,))
+    appt_txns = cur.fetchall()
+
+    cur.execute("""
+        SELECT 'Lab Test' as type, p.name as patient_name, l.report_type as details, 
+               COALESCE(l.amount, 0.00) as amount, l.payment_method, l.report_date as txn_date 
+        FROM lab_reports l 
+        JOIN patients p ON l.aadhaar = p.aadhaar 
+        WHERE l.report_date = %s
+    """, (today_str,))
+    lab_txns = cur.fetchall()
+
+    all_txns = appt_txns + lab_txns
+    all_txns.sort(key=lambda x: x["txn_date"], reverse=True)
+
+    # 3. Patient billing search
+    search_aadhaar = request.args.get("search_aadhaar")
+    patient = None
+    pending_tests = []
+    
+    if search_aadhaar:
+        cur.execute("SELECT name, aadhaar, age, gender FROM patients WHERE aadhaar = %s", (search_aadhaar,))
+        patient = cur.fetchone()
+        
+        if patient:
+            # Get clinical history for advised tests
+            cur.execute("""
+                SELECT history_id, advised_tests, visit_date, doctor_name 
+                FROM patient_history 
+                WHERE aadhaar = %s AND advised_tests IS NOT NULL AND advised_tests != ''
+            """, (search_aadhaar,))
+            history_records = cur.fetchall()
+            
+            # Get already billed/uploaded reports for this patient
+            cur.execute("SELECT report_type, history_id, file_name FROM lab_reports WHERE aadhaar = %s", (search_aadhaar,))
+            billed_reports = cur.fetchall()
+            
+            # Map history_id and report_type to see if already billed
+            billed_set = set()
+            for r in billed_reports:
+                billed_set.add((r["history_id"], r["report_type"].lower().strip()))
+                
+            for h in history_records:
+                h_id = h["history_id"]
+                advised = [t.strip() for t in h["advised_tests"].split(",") if t.strip()]
+                for test_name in advised:
+                    if (h_id, test_name.lower()) not in billed_set:
+                        pending_tests.append({
+                            "history_id": h_id,
+                            "test_name": test_name,
+                            "visit_date": h["visit_date"].strftime("%Y-%m-%d"),
+                            "doctor_name": h["doctor_name"]
+                        })
+
+    cur.close()
+
+    return render_template("accounts_office_dashboard.html",
+                           today_total=today_total,
+                           sales_by_method=sales_by_method,
+                           all_txns=all_txns,
+                           patient=patient,
+                           pending_tests=pending_tests,
+                           search_aadhaar=search_aadhaar)
+
+# -------------------- Collect Payment & Authorize Lab Test --------------------
+@app.route("/accounts_office/collect_payment", methods=["POST"])
+def collect_payment():
+    if not session.get("accounts_office_logged_in"):
+        return {"error": "Unauthorized"}, 401
+
+    aadhaar = request.form.get("aadhaar")
+    history_id = request.form.get("history_id")
+    test_name = request.form.get("test_name")
+    amount = request.form.get("amount", "350.00")
+    payment_method = request.form.get("payment_method", "UPI")
+    today_str = date.today().isoformat()
+
+    cur = mysql.connection.cursor()
+    
+    # Insert placeholder entry into lab_reports indicating paid but pending file upload
+    cur.execute("""
+        INSERT INTO lab_reports (aadhaar, report_date, report_type, file_name, file_data, uploaded_by, history_id, amount, payment_method)
+        VALUES (%s, %s, %s, 'Pending Upload', 'Pending Upload', 'Accounts Office', %s, %s, %s)
+    """, (aadhaar, today_str, test_name, int(history_id), amount, payment_method))
+    
+    mysql.connection.commit()
+    cur.close()
+
+    flash(f"Payment of ₹{float(amount):,.2f} for {test_name} processed successfully! Lab test authorized.", "success")
+    return redirect(url_for("accounts_office_dashboard", search_aadhaar=aadhaar))
+
+# -------------------- Accounts Office Logout --------------------
+@app.route("/accounts_office/logout")
+def accounts_office_logout():
+    session.pop("accounts_office_logged_in", None)
     return redirect(url_for("admin_login"))
 
 if __name__ == "__main__":

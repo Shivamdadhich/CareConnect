@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounts Office | CareConnect</title>
+    <!-- Google Fonts & Bootstrap -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include 'theme_style.html' %}
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f4fbf7;
+            color: #0f172a;
+            font-size: 0.9rem;
+        }
+        
+        .navbar-brand {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+        }
+
+        /* Glassmorphism & Elevated Premium Cards */
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid rgba(16, 185, 129, 0.12);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px -10px rgba(4, 120, 87, 0.04), 0 1px 3px rgba(4, 120, 87, 0.02);
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            box-shadow: 0 20px 40px -15px rgba(4, 120, 87, 0.08);
+            border-color: rgba(16, 185, 129, 0.24);
+        }
+
+        /* Earning Gradient Header Card */
+        .gradient-header-card {
+            background: linear-gradient(135deg, #064e3b 0%, #0f766e 50%, #10b981 100%);
+            border: none;
+            border-radius: 20px;
+            color: #ffffff;
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 15px 35px -12px rgba(6, 78, 59, 0.3);
+        }
+        .gradient-header-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
+            border-radius: 50%;
+        }
+
+        /* Mini Stats Metrics */
+        .metric-card {
+            background: #ffffff;
+            border: 1px solid #e6f4ed;
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: #a7f3d0;
+        }
+        .metric-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .bg-cash-light { background: #ecfdf5; color: #047857; }
+        .bg-upi-light { background: #eff6ff; color: #1d4ed8; }
+        .bg-card-light { background: #fdf4ff; color: #a21caf; }
+
+        .metric-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 2px;
+        }
+        .metric-lbl {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        /* Interactive Elements */
+        .search-input-group {
+            border: 2px solid #e6f4ed;
+            border-radius: 12px;
+            padding: 4px;
+            background: #ffffff;
+            transition: border-color 0.2s ease;
+        }
+        .search-input-group:focus-within {
+            border-color: #10b981;
+        }
+        .search-input-group input {
+            border: none;
+            box-shadow: none !important;
+            padding-left: 12px;
+            font-size: 0.95rem;
+        }
+
+        /* Billing Checklist Rows */
+        .billing-item-row {
+            border: 1px solid #e6f4ed;
+            border-radius: 14px;
+            padding: 18px;
+            background: #ffffff;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+        .billing-item-row:hover {
+            border-color: #10b981;
+            box-shadow: 0 8px 20px -8px rgba(16, 185, 129, 0.15);
+            transform: scale(1.005);
+        }
+
+        .patient-badge {
+            background: #e6f4ed;
+            color: #047857;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        /* Custom Table design for Transaction logs */
+        .custom-table th {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #475569;
+            font-weight: 600;
+            border-bottom: 1.5px solid #e2e8f0;
+            padding: 12px;
+        }
+        .custom-table td {
+            padding: 12px;
+            vertical-align: middle;
+        }
+        .custom-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background-color 0.2s ease;
+        }
+        .custom-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .badge-payment-cash { background-color: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 600; }
+        .badge-payment-upi { background-color: #dbeafe; color: #1d4ed8; font-size: 0.75rem; font-weight: 600; }
+        .badge-payment-card { background-color: #f3e8ff; color: #7e22ce; font-size: 0.75rem; font-weight: 600; }
+        
+        .badge-type-appt { background-color: #f1f5f9; color: #475569; font-size: 0.75rem; }
+        .badge-type-lab { background-color: #fef3c7; color: #b45309; font-size: 0.75rem; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top py-2.5">
+        <div class="container px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center text-dark text-decoration-none" href="#">
+                <span class="text-success me-2" style="font-size: 1.45rem;">✚</span> CareConnect
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-light text-success border px-3 py-2 rounded-pill fw-semibold" style="font-size: 0.78rem;">
+                    💼 Accounts Office Dashboard
+                </span>
+                <a href="/accounts_office/logout" class="btn btn-outline-danger btn-sm px-3 rounded-pill fw-semibold" style="font-size: 0.75rem;">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4 px-4">
+        <!-- Flashed Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show border-0 mb-4 py-3 px-4 shadow-sm" role="alert" style="border-radius: 12px;">
+                        <div class="d-flex align-items-center gap-2">
+                            {% if category == 'success' %}
+                                <span>🎉</span>
+                            {% else %}
+                                <span>⚠️</span>
+                            {% endif %}
+                            <strong>{{ message }}</strong>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+            <!-- LEFT MODULE: Patient Billing Portal -->
+            <div class="col-lg-7">
+                <!-- Search Card -->
+                <div class="glass-card">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center gap-2 text-success" style="font-family: 'Outfit', sans-serif;">
+                        <span>🔍</span> Patient Billing Profile Search
+                    </h5>
+                    <p class="text-muted small mb-3">Retrieve diagnostic recommendations and patient files to process cash, UPI, or card transactions.</p>
+                    <form method="GET" class="search-input-group d-flex align-items-center">
+                        <input type="text" name="search_aadhaar" class="form-control" placeholder="Enter Patient Aadhaar Card Number" value="{{ search_aadhaar or '' }}" required>
+                        <button type="submit" class="btn btn-success px-4 py-2 fw-semibold rounded-3 ms-2">Search</button>
+                    </form>
+                </div>
+
+                {% if patient %}
+                    <!-- Patient Summary Card -->
+                    <div class="glass-card" style="background: linear-gradient(180deg, #ffffff 0%, #f9fbfb 100%);">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                                <span class="text-muted small uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 1px;">PATIENT DETAILS</span>
+                                <h4 class="text-success fw-bold mt-1 mb-2" style="font-family: 'Outfit', sans-serif;">{{ patient.name }}</h4>
+                                <span class="patient-badge">Aadhaar / UHID: {{ patient.aadhaar }}</span>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted small">Age / Sex</div>
+                                <strong class="text-dark">{{ patient.age }} Years &bull; {{ patient.gender }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advised Lab Tests Billing List -->
+                    <div class="glass-card">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2 text-success" style="font-family: 'Outfit', sans-serif;">
+                            <span>🔬</span> Advised Investigations & Payment Collections
+                        </h5>
+                        {% if pending_tests %}
+                            {% for test in pending_tests %}
+                                <div class="billing-item-row">
+                                    <form method="POST" action="/accounts_office/collect_payment">
+                                        <input type="hidden" name="aadhaar" value="{{ patient.aadhaar }}">
+                                        <input type="hidden" name="history_id" value="{{ test.history_id }}">
+                                        <input type="hidden" name="test_name" value="{{ test.test_name }}">
+                                        
+                                        <div class="row align-items-center g-3">
+                                            <div class="col-md-5">
+                                                <div class="fw-bold text-dark" style="font-size: 0.95rem;">{{ test.test_name }}</div>
+                                                <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                                                    Advised by <strong>{{ test.doctor_name }}</strong> on {{ test.visit_date }}
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="input-group">
+                                                    <span class="input-group-text bg-light border-end-0 text-muted" style="font-size: 0.8rem;">₹</span>
+                                                    <input type="number" name="amount" class="form-control border-start-0 text-end fw-semibold" value="350" min="0" step="50" required style="font-size: 0.85rem;">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select name="payment_method" class="form-select text-center fw-semibold" required style="font-size: 0.8rem;">
+                                                    <option value="UPI" selected>UPI</option>
+                                                    <option value="Cash">Cash</option>
+                                                    <option value="Card">Card</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="submit" class="btn btn-success w-100 py-2 fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Collect</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <span style="font-size: 2.5rem; display: block; filter: grayscale(0.2);" class="mb-2">✅</span>
+                                <h6 class="fw-bold text-success mb-1">Billing Clear!</h6>
+                                <p class="text-muted small mb-0">No pending lab investigations billing found for this profile.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% elif search_aadhaar %}
+                    <div class="alert alert-warning border-0 p-4 shadow-sm" style="border-radius: 14px;">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span>🔍</span>
+                            <h6 class="fw-bold mb-0">Patient Profile Not Found</h6>
+                        </div>
+                        <p class="small text-muted mb-0">No patient registered with Aadhaar card <strong>{{ search_aadhaar }}</strong>. Verify the details or register the patient first.</p>
+                    </div>
+                {% else %}
+                    <div class="alert bg-white border border-light p-4 shadow-sm" style="border-radius: 14px;">
+                        <div class="d-flex gap-3 align-items-center">
+                            <span style="font-size: 2.2rem;">💼</span>
+                            <div>
+                                <h6 class="fw-bold text-success mb-1">Accounts Office Terminal</h6>
+                                <p class="small text-muted mb-0">Enter the patient's Aadhaar card above to authorize diagnostic tests, verify clinical requisitions, and print invoice statements.</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- RIGHT MODULE: Statistics Dashboard & Transaction log -->
+            <div class="col-lg-5">
+                <!-- Earning Card -->
+                <div class="gradient-header-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold uppercase small" style="letter-spacing: 1px; font-size: 0.75rem; opacity: 0.9;">TODAY'S COLLECTIONS</span>
+                        <span style="font-size: 1.5rem;">📈</span>
+                    </div>
+                    <h2 class="fw-bold mt-2 mb-1" style="font-family: 'Outfit', sans-serif;">₹{{ "{:,.2f}".format(today_total) }}</h2>
+                    <p class="mb-0 small" style="opacity: 0.85;">Total authorized transactions and lab tests for today.</p>
+                </div>
+
+                <!-- Payment Breakdowns -->
+                <div class="row g-3 mb-4">
+                    <div class="col-4">
+                        <div class="metric-card">
+                            <div>
+                                <span class="metric-lbl">Cash</span>
+                                <div class="metric-val">₹{{ "{:,.0f}".format(sales_by_method.Cash) }}</div>
+                            </div>
+                            <div class="metric-icon-box bg-cash-light">💵</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="metric-card">
+                            <div>
+                                <span class="metric-lbl">UPI</span>
+                                <div class="metric-val">₹{{ "{:,.0f}".format(sales_by_method.UPI) }}</div>
+                            </div>
+                            <div class="metric-icon-box bg-upi-light">⚡</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="metric-card">
+                            <div>
+                                <span class="metric-lbl">Card</span>
+                                <div class="metric-val">₹{{ "{:,.0f}".format(sales_by_method.Card) }}</div>
+                            </div>
+                            <div class="metric-icon-box bg-card-light">💳</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Log -->
+                <div class="glass-card">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center gap-2 text-success" style="font-family: 'Outfit', sans-serif;">
+                        <span>💸</span> Collections Log (Today)
+                    </h5>
+                    {% if all_txns %}
+                        <div class="table-responsive" style="max-height: 380px; border: none; border-radius: 0;">
+                            <table class="table align-middle mb-0 custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>Patient / Description</th>
+                                        <th>Type</th>
+                                        <th>Mode</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for txn in all_txns %}
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold text-dark">{{ txn.patient_name }}</div>
+                                                <div class="text-muted small" style="font-size: 0.72rem;">{{ txn.details }}</div>
+                                            </td>
+                                            <td>
+                                                {% if txn.type == 'Appointment' %}
+                                                    <span class="badge badge-type-appt py-1 px-2 rounded-2">OPD</span>
+                                                {% else %}
+                                                    <span class="badge badge-type-lab py-1 px-2 rounded-2">Lab</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if txn.payment_method == 'Cash' %}
+                                                    <span class="badge badge-payment-cash py-1 px-2 rounded-pill">Cash</span>
+                                                {% elif txn.payment_method == 'UPI' %}
+                                                    <span class="badge badge-payment-upi py-1 px-2 rounded-pill">UPI</span>
+                                                {% else %}
+                                                    <span class="badge badge-payment-card py-1 px-2 rounded-pill">Card</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end fw-bold text-dark">₹{{ "{:,.2f}".format(txn.amount) }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <span style="font-size: 2.2rem;" class="d-block mb-2">📥</span>
+                            <p class="small mb-0">No collections registered today.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

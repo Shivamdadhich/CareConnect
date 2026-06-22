@@ -145,9 +145,24 @@
               </select>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-3">
               <label class="form-label">Preferred Date</label>
               <input type="date" name="date" class="form-control glass-input" required min="{{ min_date }}">
+            </div>
+
+            <div class="row g-2 mb-4">
+              <div class="col-6">
+                <label class="form-label">Consultation Fee (₹)</label>
+                <input type="number" name="amount" class="form-control glass-input" value="500" min="0" step="50" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Payment Mode</label>
+                <select class="form-select glass-select" name="payment_method" required>
+                  <option value="Cash" selected>Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Card">Card</option>
+                </select>
+              </div>
             </div>
 
             <button type="submit" class="btn btn-action btn-success w-100 mb-3">Confirm Appointment Booking ➔</button>
