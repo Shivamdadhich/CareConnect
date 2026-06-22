@@ -24,7 +24,7 @@ class MySQLWrapper:
         
         # Setup SSL if specified (recommended/required for cloud DBs)
         ssl_mode = os.getenv("DB_SSL_MODE", "False").lower() in ("true", "1", "yes")
-        ssl_config = {} if ssl_mode else None
+        ssl_config = {"min_version": "TLSv1.2"} if ssl_mode else None
 
         return pymysql.connect(
             host=host,
