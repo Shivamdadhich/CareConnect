@@ -26,12 +26,10 @@ def make_session_permanent():
 
 mysql = get_connection(app)
 
-@app.teardown_appcontext
-def close_db(error):
-    from flask import g
-    db_conn = g.pop('db_conn', None)
-    if db_conn is not None and db_conn.open:
-        db_conn.close()
+def normalize_aadhaar(aadhaar):
+    if not aadhaar:
+        return ""
+    return "".join(c for c in aadhaar if c.isdigit())[:12]
 
 # -------------------- Image Compression Utility --------------------
 from PIL import Image
@@ -143,7 +141,7 @@ def receptionist_logout():
 @app.route("/receptionist/search", methods=["GET", "POST"])
 def search_patient():
     if request.method == "POST":
-        aadhaar = request.form.get("aadhaar")
+        aadhaar = normalize_aadhaar(request.form.get("aadhaar"))
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute("SELECT * FROM patients WHERE aadhaar = %s", (aadhaar,))
         patient = cursor.fetchone()
@@ -165,12 +163,21 @@ def register_patient():
         gender = request.form.get("gender")
         phone = request.form.get("phone")
         address = request.form.get("address")
-        aadhaar = request.form.get("aadhaar")
+        aadhaar = normalize_aadhaar(request.form.get("aadhaar"))
 
         age = None
         if birth_date:
             birth_date_obj = datetime.strptime(birth_date, '%Y-%m-%d')
             age = (datetime.today() - birth_date_obj).days // 365
+
+        # Check if patient already exists to avoid primary key duplicates (IntegrityError)
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute("SELECT name FROM patients WHERE aadhaar = %s", (aadhaar,))
+        existing_patient = cursor.fetchone()
+        cursor.close()
+
+        if existing_patient:
+            return redirect(url_for("make_appointment", aadhaar=aadhaar))
 
         cursor = mysql.connection.cursor()
         cursor.execute("""
@@ -182,14 +189,14 @@ def register_patient():
 
         return redirect(url_for("make_appointment", aadhaar=aadhaar))
 
-    aadhaar = request.args.get("aadhaar")
+    aadhaar = normalize_aadhaar(request.args.get("aadhaar"))
     return render_template("register_patient.html", aadhaar=aadhaar)
 
 # -------------------- Make Appointment --------------------
 @app.route("/receptionist/appointment", methods=["GET", "POST"])
 def make_appointment():
     if request.method == "POST":
-        aadhaar = request.form.get("aadhaar")
+        aadhaar = normalize_aadhaar(request.form.get("aadhaar"))
         department = request.form.get("department")
         doctor = request.form.get("doctor")
         
@@ -245,7 +252,7 @@ def make_appointment():
                                valid_upto=(appt_date_obj + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S'),
                                amount=f"{amount_val:,.2f}")
 
-    aadhaar = request.args.get("aadhaar")
+    aadhaar = normalize_aadhaar(request.args.get("aadhaar"))
     min_date = get_ist_now().date().isoformat()
 
     # Fetch active doctors from database
