@@ -192,7 +192,27 @@ def make_appointment():
         aadhaar = request.form.get("aadhaar")
         department = request.form.get("department")
         doctor = request.form.get("doctor")
+        
+        # Robust date parsing
+        raw_date = request.form.get("date")
+        appointment_date = None
+        if raw_date:
+            for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%Y/%m/%d', '%d/%m/%Y'):
+                try:
+                    appointment_date = datetime.strptime(raw_date, fmt).date().isoformat()
+                    break
+                except ValueError:
+                    continue
+        if not appointment_date:
+            appointment_date = get_ist_now().date().isoformat()
+
+        # Robust amount parsing
         amount = request.form.get("amount", "500.00")
+        try:
+            amount_val = float(amount)
+        except (TypeError, ValueError):
+            amount_val = 500.00
+
         payment_method = request.form.get("payment_method", "Cash")
 
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -205,9 +225,14 @@ def make_appointment():
         cursor.execute("""
             INSERT INTO appointments (aadhaar, department, doctor, appointment_date, amount, payment_method)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (aadhaar, department, doctor, appointment_date, amount, payment_method))
+        """, (aadhaar, department, doctor, appointment_date, amount_val, payment_method))
         mysql.connection.commit()
         cursor.close()
+
+        try:
+            appt_date_obj = datetime.strptime(appointment_date, '%Y-%m-%d')
+        except Exception:
+            appt_date_obj = get_ist_now()
 
         return render_template("appointment_confirmation.html",
                                uhid=aadhaar,
@@ -217,8 +242,8 @@ def make_appointment():
                                department=department,
                                doctor=doctor,
                                appointment_date=appointment_date,
-                               valid_upto=(datetime.strptime(appointment_date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S'),
-                               amount=f"{float(amount):,.2f}")
+                               valid_upto=(appt_date_obj + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S'),
+                               amount=f"{amount_val:,.2f}")
 
     aadhaar = request.args.get("aadhaar")
     min_date = get_ist_now().date().isoformat()
