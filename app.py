@@ -1448,7 +1448,7 @@ def accounts_office_dashboard():
     """, (today_str,))
     lab_txns = cur.fetchall()
 
-    all_txns = appt_txns + lab_txns
+    all_txns = list(appt_txns) + list(lab_txns)
     all_txns.sort(key=lambda x: x["txn_date"], reverse=True)
 
     # 3. Patient billing search
