@@ -112,10 +112,7 @@ def receptionist_login():
         cur.close()
 
         if receptionist:
-            session.pop("doctor_logged_in", None)
-            session.pop("doctor_name", None)
-            session.pop("lab_logged_in", None)
-            session.pop("lab_name", None)
+            session.clear()
             session["receptionist_logged_in"] = True
             session["receptionist_id"] = receptionist["receptionist_id"]
             session["receptionist_name"] = receptionist["name"]
@@ -338,10 +335,7 @@ def doctor_login():
         print("Doctor fetched:", doctor)  # Debugging
 
         if doctor:
-            session.pop("lab_logged_in", None)
-            session.pop("lab_name", None)
-            session.pop("receptionist_logged_in", None)
-            session.pop("receptionist_name", None)
+            session.clear()
             session["doctor_logged_in"] = True
             session["doctor_id"] = doctor[0]   # doctor_id
             session["doctor_name"] = doctor[3] # name
@@ -576,10 +570,7 @@ def lab_login():
         cur.close()
 
         if lab_staff:
-            session.pop("doctor_logged_in", None)
-            session.pop("doctor_name", None)
-            session.pop("receptionist_logged_in", None)
-            session.pop("receptionist_name", None)
+            session.clear()
             session["lab_logged_in"] = True
             session["lab_id"] = lab_staff["lab_staff_id"]
             session["lab_name"] = lab_staff["name"]
@@ -1228,9 +1219,7 @@ def other_login():
         # Admin login credentials
         if role == "admin":
             if username == "admin" and password == "admin123":
-                session.pop("doctor_logged_in", None)
-                session.pop("lab_logged_in", None)
-                session.pop("receptionist_logged_in", None)
+                session.clear()
                 session["admin_logged_in"] = True
                 return redirect(url_for("admin_dashboard"))
             else:
@@ -1240,10 +1229,7 @@ def other_login():
         # Accounts Office login credentials
         if role == "accounts_office":
             if username == "accounts" and password == "pass123":
-                session.pop("doctor_logged_in", None)
-                session.pop("lab_logged_in", None)
-                session.pop("receptionist_logged_in", None)
-                session.pop("admin_logged_in", None)
+                session.clear()
                 session["accounts_office_logged_in"] = True
                 return redirect(url_for("accounts_office_dashboard"))
             else:
@@ -1265,6 +1251,12 @@ def other_login():
         flash("Invalid username or password", "danger")
         return redirect(url_for("other_login", role=role))
     return render_template("other_login.html")
+
+# -------------------- System Admin Logout --------------------
+@app.route("/admin/logout")
+def admin_logout():
+    session.clear()
+    return redirect(url_for("other_login", role="admin"))
 
 # -------------------- System Admin Dashboard --------------------
 @app.route("/admin/dashboard")
